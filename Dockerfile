@@ -25,6 +25,6 @@ RUN . /opt/axis/acapsdk/environment-setup* && \
 
 FROM busybox:1.34.0
 ARG BUILD_DIR
-WORKDIR /server-acap
+WORKDIR /eap
 COPY --from=builder "$BUILD_DIR"/*eap ./
 COPY --from=builder "$BUILD_DIR"/*LICENSE.txt ./
