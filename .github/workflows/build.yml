@@ -24,11 +24,11 @@ jobs:
       - name: Verify ACAPs
         run: |
           for a in armv7hf aarch64; do
-	  echo "Verification of $a ACAP"
+          echo "Verification of $a ACAP"
           tar tzf *$a.eap >/dev/null
           done
       - name: Clean
         run: |
           make clean
-	  echo 'Make sure no ACAP files are left'
+          echo 'Make sure no ACAP files are left'
           [ -z "$(ls ./*.eap ./*LICENSE.txt)" ]
