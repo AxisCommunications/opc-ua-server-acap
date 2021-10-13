@@ -1,6 +1,8 @@
 # Copyright (C) 2021 Axis Communications AB, Lund, Sweden
 # SPDX-License-Identifier: Apache-2.0
 
+.PHONY: %.eap dockerbuild 3rd-party-clean clean very-clean
+
 PROG = opcua_server
 OBJS = $(PROG).o opcua_dbus.o opcua_open62541.o opcua_tempsensors.o
 STRIP ?= strip
