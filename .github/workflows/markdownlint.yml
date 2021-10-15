@@ -1,5 +1,5 @@
 ---
-name: 'Trigger: Push action'
+name: 'Run markdownlint'
 
 on:
   push:

@@ -1,5 +1,5 @@
 ---
-name: 'Trigger: Push action'
+name: 'Check C style with clang-format'
 
 on:
   push:
