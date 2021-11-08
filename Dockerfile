@@ -1,5 +1,5 @@
 ARG ARCH=armv7hf
-ARG ACAP_SDK_VERSION=3.4
+ARG ACAP_SDK_VERSION=3.4.2
 ARG SDK_IMAGE=axisecp/acap-sdk
 ARG BUILD_DIR=/usr/local/src/server-acap
 
@@ -23,8 +23,6 @@ COPY LICENSE \
 RUN . /opt/axis/acapsdk/environment-setup* && \
     create-package.sh
 
-FROM busybox:1.34.0
+FROM scratch
 ARG BUILD_DIR
-WORKDIR /eap
-COPY --from=builder "$BUILD_DIR"/*eap ./
-COPY --from=builder "$BUILD_DIR"/*LICENSE.txt ./
+COPY --from=builder "$BUILD_DIR"/*eap "$BUILD_DIR"/*LICENSE.txt /
