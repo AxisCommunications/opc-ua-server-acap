@@ -49,8 +49,7 @@ $(LIBOPEN62541): $(OPEN62541_BUILD)/Makefile
 
 # docker build container targets
 %.eap:
-	docker build --build-arg ARCH=$(@:.eap=) -t $(TAG):$(@:.eap=) . && \
-	docker run --rm --user $$(id -u):$$(id -g) -v "$$PWD":/dst $(TAG):$(@:.eap=) /bin/sh -c 'cp * /dst'
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=$(@:.eap=) -o type=local,dest=. .
 
 dockerbuild: armv7hf.eap aarch64.eap
 
