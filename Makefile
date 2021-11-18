@@ -3,8 +3,8 @@
 
 .PHONY: %.eap dockerbuild 3rd-party-clean clean very-clean
 
-PROG = opcua_server
-OBJS = $(PROG).o opcua_dbus.o opcua_open62541.o opcua_tempsensors.o
+PROG = opcuaserver
+OBJS = opcua_server.o opcua_dbus.o opcua_open62541.o opcua_tempsensors.o
 STRIP ?= strip
 
 PKGS =  gio-2.0 glib-2.0
