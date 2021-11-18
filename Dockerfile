@@ -18,10 +18,10 @@ COPY LICENSE \
      Makefile \
      *.c \
      *.h \
-     *.conf \
+     manifest.json \
      ./
 RUN . /opt/axis/acapsdk/environment-setup* && \
-    create-package.sh
+    acap-build .
 
 FROM scratch
 ARG BUILD_DIR

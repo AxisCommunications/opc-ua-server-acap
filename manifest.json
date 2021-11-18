@@ -1,0 +1,17 @@
+{
+    "schemaVersion": "1.2",
+    "acapPackageConf": {
+        "setup": {
+            "appName": "opcuaserver",
+            "friendlyName": "OPC UA Server", 
+            "vendor": "Axis Communications AB",
+            "embeddedSdkVersion": "2.0",
+            "user": {
+                "username": "root",
+                "group": "root"
+            },
+            "runMode": "respawn",
+            "version": "1.0.1"
+        }
+    }
+}
