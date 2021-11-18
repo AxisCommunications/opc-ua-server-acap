@@ -15,6 +15,7 @@
  */
 
 #include <assert.h>
+#include <axparameter.h>
 #include <libgen.h>
 #include <open62541/server_config_default.h>
 #include <pthread.h>
@@ -24,8 +25,12 @@
 #include "opcua_open62541.h"
 #include "opcua_tempsensors.h"
 
+static AXParameter *axparameter = NULL;
 static tempsensors_t tempsensors;
 static UA_Server *server = NULL;
+static guint port = 0;
+static UA_Boolean ua_server_running = false;
+static pthread_t ua_server_thread_id;
 
 static void open_syslog(const char *app_name)
 {
@@ -93,6 +98,127 @@ static void add_tempsensors(void)
     }
 }
 
+static gboolean launch_ua_server(const guint serverport)
+{
+    assert(NULL == server);
+    assert(0 < serverport);
+    assert(!ua_server_running);
+
+    // Create an OPC UA server
+    LOG_I("%s/%s: Create UA server serving on port %u", __FILE__, __FUNCTION__, serverport);
+    server = UA_Server_new();
+    if (4840 != serverport)
+    {
+        UA_ServerConfig_setMinimal(UA_Server_getConfig(server), serverport, NULL);
+    }
+    ua_server_init(server);
+
+    // Add temperature sensors to OPA UA server
+    add_tempsensors();
+
+    ua_server_running = true;
+    LOG_I("%s/%s: Starting UA server ...", __FILE__, __FUNCTION__);
+    if (!ua_server_run(&ua_server_thread_id, &ua_server_running))
+    {
+        LOG_E("%s/%s: Failed to launch UA server", __FILE__, __FUNCTION__);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void shutdown_ua_server(void)
+{
+    assert(ua_server_running);
+    assert(NULL != server);
+
+    ua_server_running = false;
+    LOG_I("%s/%s: Stop UA server ...", __FILE__, __FUNCTION__);
+    pthread_join(ua_server_thread_id, NULL);
+    LOG_I("%s/%s: Delete UA server ...", __FILE__, __FUNCTION__);
+    UA_Server_run_shutdown(server);
+    UA_Server_delete(server);
+    server = NULL;
+}
+
+static void port_callback(const gchar *name, const gchar *value, void *data)
+{
+    (void)data;
+    /* Translate parameter value to number; atoi can handle NULL */
+    int newport = atoi(value);
+    if (1 > newport)
+    {
+        LOG_E("%s/%s: illegal value for %s: '%s'", __FILE__, __FUNCTION__, name, value);
+        return;
+    }
+    port = newport;
+    LOG_I("%s/%s: OPC UA server %s is %u", __FILE__, __FUNCTION__, name, port);
+
+    if (ua_server_running)
+    {
+        shutdown_ua_server();
+    }
+    (void)launch_ua_server(port);
+}
+
+static gboolean setup_param(const gchar *name, AXParameterCallback callbackfn)
+{
+    GError *error = NULL;
+    gchar *value = NULL;
+
+    assert(NULL != name);
+    assert(NULL != axparameter);
+    assert(NULL != callbackfn);
+
+    if (!ax_parameter_register_callback(axparameter, name, callbackfn, NULL, &error))
+    {
+        LOG_E("%s/%s: failed to register %s callback", __FILE__, __FUNCTION__, name);
+        if (NULL != error)
+        {
+            LOG_E("%s/%s: %s", __FILE__, __FUNCTION__, error->message);
+            g_error_free(error);
+        }
+        return FALSE;
+    }
+    if (!ax_parameter_get(axparameter, name, &value, &error))
+    {
+        LOG_E("%s/%s: failed to get %s parameter", __FILE__, __FUNCTION__, name);
+        if (NULL != error)
+        {
+            LOG_E("%s/%s: %s", __FILE__, __FUNCTION__, error->message);
+            g_error_free(error);
+        }
+        return FALSE;
+    }
+    LOG_I("%s/%s: Got %s value: %s", __FILE__, __FUNCTION__, name, value);
+    callbackfn(name, value, NULL);
+    g_free(value);
+
+    return TRUE;
+}
+
+static gboolean setup_params(const char *appname)
+{
+    GError *error = NULL;
+
+    assert(NULL != appname);
+    assert(NULL == axparameter);
+    axparameter = ax_parameter_new(appname, &error);
+    if (NULL != error)
+    {
+        LOG_E("%s/%s: ax_parameter_new failed (%s)", __FILE__, __FUNCTION__, error->message);
+        g_error_free(error);
+        return FALSE;
+    }
+
+    if (!setup_param("port", port_callback))
+    {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 static void init_signals(void)
 {
     struct sigaction sa;
@@ -111,32 +237,23 @@ int main(int argc, char **argv)
     char *app_name = basename(argv[0]);
     open_syslog(app_name);
 
+    // Setup D-Bus
     LOG_I("%s/%s: Setup D-Bus", __FILE__, __FUNCTION__);
     if (!dbus_temp_init())
     {
         LOG_E("%s/%s: Failed to setup D-Bus", __FILE__, __FUNCTION__);
     }
 
-    // Create an OPC UA server listening on port 4840
-    LOG_I("%s/%s: Create UA server", __FILE__, __FUNCTION__);
-    server = UA_Server_new();
-    ua_server_init(server);
-
-    // Add temperature sensors to OPA UA server
-    add_tempsensors();
-
-    // Run OPC UA server
-    UA_Boolean running = true;
-    pthread_t thread_id;
-    LOG_I("%s/%s: Starting UA server ...", __FILE__, __FUNCTION__);
-    if (!ua_server_run(&thread_id, &running))
-    {
-        LOG_E("%s/%s: Failed to launch UA server", __FILE__, __FUNCTION__);
-    }
-
     // Connect to D-Bus signal
     LOG_I("%s/%s: Connect to D-Bus signal ...", __FILE__, __FUNCTION__);
     dbus_connect_g_signal(G_CALLBACK(on_dbus_signal));
+
+    // Setup parameters (will also launch OPC UA server)
+    LOG_I("%s/%s: Setup parameters", __FILE__, __FUNCTION__);
+    if (!setup_params(app_name))
+    {
+        LOG_E("%s/%s: Failed to setup parameters", __FILE__, __FUNCTION__);
+    }
 
     // Main loop
     LOG_I("%s/%s: Ready", __FILE__, __FUNCTION__);
@@ -148,10 +265,7 @@ int main(int argc, char **argv)
     dbus_temp_cleanup();
 
     LOG_I("%s/%s: Shut down UA server ...", __FILE__, __FUNCTION__);
-    running = false;
-    pthread_join(thread_id, NULL);
-    LOG_I("%s/%s: Delete UA server ...", __FILE__, __FUNCTION__);
-    UA_Server_delete(server);
+    shutdown_ua_server();
 
     LOG_I("%s/%s: Free data structures ...", __FILE__, __FUNCTION__);
     tempsensors_t *tempsensors_p = &tempsensors;

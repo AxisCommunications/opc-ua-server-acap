@@ -11,7 +11,12 @@
                 "group": "root"
             },
             "runMode": "respawn",
-            "version": "1.0.1"
+            "version": "1.0.2"
+        },
+        "configuration": {
+            "paramConfig": [
+                {"name": "port", "type": "int:min=1", "default": "4840"}
+            ]
         }
     }
 }
