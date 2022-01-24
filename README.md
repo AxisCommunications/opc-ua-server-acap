@@ -12,20 +12,29 @@ it actually is to integrate any Axis device in an OPC UA system.
 
 ```sh
 # With the environment initialized, use:
-create-package.sh
+acap-build .
 ```
 
 ### Using ACAP SDK build container and Docker
 
 The handling of this is integrated in the [Makefile](Makefile), so if you have
-Docker on your computer all you need to do is:
+Docker and `make` on your computer all you need to do is:
 
 ```sh
 make dockerbuild
 ```
 
-or perhaps
+or perhaps build in parallel:
 
 ```sh
 make -j dockerbuild
+```
+
+If you do have Docker but no `make` on your system:
+
+```sh
+# 32-bit ARM
+DOCKER_BUILDKIT=1 docker build --build-arg ARCH=armv7hf -o type=local,dest=. .
+# 64-bit ARM
+DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -o type=local,dest=. .
 ```
