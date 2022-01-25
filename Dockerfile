@@ -3,11 +3,7 @@ ARG ACAP_SDK_VERSION=3.4.2
 ARG SDK_IMAGE=axisecp/acap-sdk
 ARG BUILD_DIR=/usr/local/src/server-acap
 
-FROM $SDK_IMAGE:$ACAP_SDK_VERSION-armv7hf-ubuntu20.04 AS armv7hf
-
-FROM $SDK_IMAGE:$ACAP_SDK_VERSION-aarch64-ubuntu20.04 AS aarch64
-
-FROM $ARCH AS builder
+FROM $SDK_IMAGE:$ACAP_SDK_VERSION-$ARCH as builder
 ARG BUILD_DIR
 RUN DEBIAN_FRONTEND=noninteractive \
     apt-get update && \
