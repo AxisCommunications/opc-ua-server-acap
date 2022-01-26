@@ -5,6 +5,7 @@ ARG BUILD_DIR=/usr/local/src/server-acap
 
 FROM $SDK_IMAGE:$ACAP_SDK_VERSION-$ARCH as builder
 ARG BUILD_DIR
+# hadolint ignore=DL3008
 RUN DEBIAN_FRONTEND=noninteractive \
     apt-get update && \
     apt-get install -y --no-install-recommends \
