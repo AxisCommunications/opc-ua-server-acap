@@ -11,8 +11,6 @@ PKGS =  gio-2.0 glib-2.0 axparameter
 CFLAGS += $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --cflags $(PKGS))
 LDLIBS += $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --libs $(PKGS))
 
-TAG := server-acap
-
 # open62541
 OPEN62541_VERSION = 1.2
 OPEN62541 = open62541-$(OPEN62541_VERSION)
