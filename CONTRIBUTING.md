@@ -26,6 +26,10 @@ git clone https://github.com/<your username>/opc-ua-server-acap.git
 git checkout -b <branch name>
 ```
 
+### Lint code after adding changes
+
+See more details in [LINT.md](LINT.md).
+
 ### Commit your changes
 
 ```sh
