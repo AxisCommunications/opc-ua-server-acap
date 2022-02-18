@@ -46,4 +46,4 @@ DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -o type=local,dest=. .
 
 ## License
 
-[Apache 2.0](./LICENSE)
+[Apache 2.0](LICENSE)
