@@ -43,3 +43,7 @@ DOCKER_BUILDKIT=1 docker build --build-arg ARCH=armv7hf -o type=local,dest=. .
 # 64-bit ARM, e.g. ARTPEC-8-based devices
 DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -o type=local,dest=. .
 ```
+
+## License
+
+[Apache 2.0](LICENSE)
