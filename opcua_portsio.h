@@ -14,17 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef _OPCUA_OPEN62541_H_
-#define _OPCUA_OPEN62541_H_
+#ifndef _OPCUA_PORTSIO_H_
+#define _OPCUA_PORTSIO_H_
 
-#include <open62541/server.h>
+#include <stdint.h>
+#include <stdio.h>
 
-void ua_server_init(UA_Server *s);
-bool ua_server_run(pthread_t *thread_id, UA_Boolean *running);
+#define PORT_LABEL_LEN 8
+#define PORT_LABEL_FMT "port %i"
 
-void ua_server_add_double(char *label, UA_Double value);
-void ua_server_update_temp(char *label, UA_Double value);
+typedef struct
+{
+    size_t size;
+    uint32_t *subid;
+    char **labels;
+} ports_t;
 
-void ua_server_add_bool(char *label, UA_Boolean state);
-void ua_server_update_port(char *label, UA_Boolean state);
-#endif /* _OPCUA_OPEN62541_H_ */
+void ports_init(ports_t **ports, const size_t size);
+void ports_free(ports_t **ports);
+char *ports_get_label_from_subscription(ports_t *ports, const uint32_t subscription_id);
+
+#endif /* _OPCUA_PORTSIO_H_ */
