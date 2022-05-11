@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Axis Communications AB, Lund, Sweden
+ * Copyright (C) 2022 Axis Communications AB, Lund, Sweden
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,11 +57,12 @@ char *ports_get_label_from_subscription(ports_t *ports, const uint32_t subscript
     for (size_t i = 0; i < ports->size; i++)
     {
         // Remember: Device IO Port name (referenced in the manual) starts at 1
-        if ( ports->subid[i] == subscription_id)
+        if (subscription_id == ports->subid[i])
         {
             // We have a match!
             return ports->labels[i];
         }
     }
+
     return NULL;
 }

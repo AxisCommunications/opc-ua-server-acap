@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Axis Communications AB, Lund, Sweden
+ * Copyright (C) 2022 Axis Communications AB, Lund, Sweden
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@
 #include "opcua_dbus.h"
 
 #define NO_TIMEOUT -1
-#define TEMPERATURE_DBUS_SERVICE "com.axis.TemperatureController"
-#define TEMPERATURE_DBUS_OBJECT "/com/axis/TemperatureController"
-#define TEMPERATURE_DBUS_INTERFACE "com.axis.TemperatureController"
+#define TEMP_DBUS_SERVICE "com.axis.TemperatureController"
+#define TEMP_DBUS_OBJECT "/com/axis/TemperatureController"
+#define TEMP_DBUS_INTERFACE "com.axis.TemperatureController"
 
 #define PORTS_DBUS_SERVICE "com.axis.IOControl.State"
 #define PORTS_DBUS_OBJECT "/com/axis/IOControl/State"
@@ -33,57 +33,28 @@
 static GDBusProxy *dbusproxy_temp;
 static GDBusProxy *dbusproxy_ports;
 
-bool dbus_all_init(void)
+static bool dbus_init(GDBusProxy **dbusproxy, const gchar *name, const gchar *object_path, const gchar *interface_name)
 {
-    assert(NULL == dbusproxy_temp);
-    assert(NULL == dbusproxy_ports);
+    assert(NULL != dbusproxy);
+    assert(NULL == *dbusproxy);
     GError *error = NULL;
 
-    // dbusproxy_temp
-    dbusproxy_temp = g_dbus_proxy_new_for_bus_sync(
-        G_BUS_TYPE_SYSTEM,
-        G_DBUS_PROXY_FLAGS_NONE,
-        NULL,
-        TEMPERATURE_DBUS_SERVICE,
-        TEMPERATURE_DBUS_OBJECT,
-        TEMPERATURE_DBUS_INTERFACE,
-        NULL,
-        &error);
-    if (NULL == dbusproxy_temp)
+    *dbusproxy = g_dbus_proxy_new_for_bus_sync(
+        G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE, NULL, name, object_path, interface_name, NULL, &error);
+    if (NULL == *dbusproxy)
     {
-        LOG_E(
-            "%s/%s: Failed to create a proxy for accessing %s (%s)",
-            __FILE__,
-            __FUNCTION__,
-            TEMPERATURE_DBUS_OBJECT,
-            error->message);
-        g_error_free(error);
-        return false;
-    }
-
-    // dbusproxy_ports
-    dbusproxy_ports = g_dbus_proxy_new_for_bus_sync(
-        G_BUS_TYPE_SYSTEM,
-        G_DBUS_PROXY_FLAGS_NONE,
-        NULL,
-        PORTS_DBUS_SERVICE,
-        PORTS_DBUS_OBJECT,
-        PORTS_DBUS_INTERFACE,
-        NULL,
-        &error);
-    if (NULL == dbusproxy_ports)
-    {
-        LOG_E(
-            "%s/%s: Failed to create a proxy for accessing %s (%s)",
-            __FILE__,
-            __FUNCTION__,
-            PORTS_DBUS_OBJECT,
-            error->message);
+        LOG_E("%s/%s: Failed to create a proxy for accessing %s (%s)", __FILE__, __FUNCTION__, name, error->message);
         g_error_free(error);
         return false;
     }
 
     return true;
+}
+
+bool dbus_all_init(void)
+{
+    return dbus_init(&dbusproxy_temp, TEMP_DBUS_SERVICE, TEMP_DBUS_OBJECT, TEMP_DBUS_INTERFACE) &&
+           dbus_init(&dbusproxy_ports, PORTS_DBUS_SERVICE, PORTS_DBUS_OBJECT, PORTS_DBUS_INTERFACE);
 }
 
 void dbus_all_cleanup(void)
@@ -109,8 +80,8 @@ bool dbus_temp_get_number_of_sensors(uint32_t *count)
     assert(NULL != dbusproxy_temp);
     GError *error = NULL;
 
-    GVariant *result =
-        g_dbus_proxy_call_sync(dbusproxy_temp, "GetNbrOfTemperatureSensors", NULL, G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
+    GVariant *result = g_dbus_proxy_call_sync(
+        dbusproxy_temp, "GetNbrOfTemperatureSensors", NULL, G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
     if (NULL == result)
     {
         LOG_E(
@@ -144,7 +115,13 @@ bool dbus_temp_get_value(int id, double *value)
     GError *error = NULL;
 
     GVariant *result = g_dbus_proxy_call_sync(
-        dbusproxy_temp, "GetTemperature", g_variant_new("(is)", id, "celsius"), G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
+        dbusproxy_temp,
+        "GetTemperature",
+        g_variant_new("(is)", id, "celsius"),
+        G_DBUS_CALL_FLAGS_NONE,
+        NO_TIMEOUT,
+        NULL,
+        &error);
     if (NULL == result)
     {
         LOG_E("%s/%s: Failed to get sensor %i temperature from D-Bus (%s)", __FILE__, __FUNCTION__, id, error->message);
@@ -247,46 +224,36 @@ void dbus_connect_ports_g_signal(GCallback func)
     g_signal_connect(dbusproxy_ports, "g-signal", func, NULL);
 }
 
-/**
- * get_number_of_ioports:
- * @brief Get number of I/O ports from dbus.
- * @return TRUE if successful.
- */
 bool dbus_get_number_of_ioports(uint32_t *inputs, uint32_t *outputs)
 {
-  assert(NULL != inputs);
-  assert(NULL != outputs);
-  assert(NULL != dbusproxy_ports);
-  gboolean ret = FALSE;
-  GError *error = NULL;
-  GVariant *ret_val = NULL;
+    assert(NULL != inputs);
+    assert(NULL != outputs);
+    assert(NULL != dbusproxy_ports);
+    GError *error = NULL;
+    GVariant *ret_val = NULL;
 
-  ret_val = g_dbus_proxy_call_sync(dbusproxy_ports, "GetNbrPorts", NULL, G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
-  if (NULL == ret_val)
-  {
-    LOG_E(
-      "%s/%s: Failed to get number of ports from D-Bus (%s)",
-      __FILE__,
-      __FUNCTION__,
-      error->message
-    );
+    ret_val =
+        g_dbus_proxy_call_sync(dbusproxy_ports, "GetNbrPorts", NULL, G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
+    if (NULL == ret_val)
+    {
+        LOG_E("%s/%s: Failed to get number of ports from D-Bus (%s)", __FILE__, __FUNCTION__, error->message);
 
-    g_error_free(error);
-    g_variant_unref(ret_val);
-    return false;
-  }
-  LOG_I("%s/%s: Got number of ports response from D-Bus!", __FILE__, __FUNCTION__);
+        g_error_free(error);
+        g_variant_unref(ret_val);
+        return false;
+    }
+    LOG_I("%s/%s: Got number of ports response from D-Bus!", __FILE__, __FUNCTION__);
 
-  if (ret_val) {
-    g_variant_get(ret_val, "(uu)", inputs, outputs);
-    ret = TRUE;
-    g_variant_unref(ret_val);
-  }
+    if (ret_val)
+    {
+        g_variant_get(ret_val, "(uu)", inputs, outputs);
+        g_variant_unref(ret_val);
+    }
 
-  return ret;
+    return true;
 }
 
-bool dbus_port_get_state(int id, bool *state)
+bool dbus_port_get_state(const int id, bool *state)
 {
     assert(NULL != state);
     assert(NULL != dbusproxy_ports);
@@ -320,7 +287,9 @@ bool dbus_port_get_state(int id, bool *state)
     return true;
 }
 
-bool dbus_port_unpack_signal(GVariant *parameters, uint32_t *subscription_id,
+bool dbus_port_unpack_signal(
+    GVariant *parameters,
+    uint32_t *subscription_id,
     gint *port,
     gboolean *virtual,
     gboolean *hidden,

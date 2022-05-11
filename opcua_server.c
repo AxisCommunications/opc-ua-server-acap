@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Axis Communications AB, Lund, Sweden
+ * Copyright (C) 2022 Axis Communications AB, Lund, Sweden
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@
 #include "opcua_common.h"
 #include "opcua_dbus.h"
 #include "opcua_open62541.h"
-#include "opcua_tempsensors.h"
 #include "opcua_portsio.h"
+#include "opcua_tempsensors.h"
 
 #define SIGNALTEMPCHANGE "TemperatureChangeSignal"
 #define SIGNALPORTIOCHANGE "PortChanged"
@@ -60,12 +60,16 @@ static void on_dbus_signal(
 
     // Check which signal
     // TemperatureChangeSignal
-    if (strcmp(signal_name,SIGNALTEMPCHANGE) == 0)
+    if (0 == strcmp(signal_name, SIGNALTEMPCHANGE))
     {
         if (!dbus_temp_unpack_signal(parameters, &sub_id, &value))
         {
             LOG_E(
-                "%s/%s: Failed to get values from signal %s sent by %s", __FILE__, __FUNCTION__, signal_name, sender_name);
+                "%s/%s: Failed to get values from signal %s sent by %s",
+                __FILE__,
+                __FUNCTION__,
+                signal_name,
+                sender_name);
             return;
         }
         label = tempsensors_get_label_from_subscription(&tempsensors, sub_id);
@@ -83,12 +87,17 @@ static void on_dbus_signal(
     gboolean activelow;
 
     // PortChanged
-    if (strcmp(signal_name,SIGNALPORTIOCHANGE) == 0)
+    if (0 == strcmp(signal_name, SIGNALPORTIOCHANGE))
     {
-        if (!dbus_port_unpack_signal(parameters, &sub_id, &port, &virtual, &hidden, &input, &virtual_trig, &state, &activelow))
+        if (!dbus_port_unpack_signal(
+                parameters, &sub_id, &port, &virtual, &hidden, &input, &virtual_trig, &state, &activelow))
         {
             LOG_E(
-                "%s/%s: Failed to get values from signal %s sent by %s", __FILE__, __FUNCTION__, signal_name, sender_name);
+                "%s/%s: Failed to get values from signal %s sent by %s",
+                __FILE__,
+                __FUNCTION__,
+                signal_name,
+                sender_name);
             return;
         }
 
@@ -96,7 +105,18 @@ static void on_dbus_signal(
         assert(NULL != label);
 
         ua_server_update_port(label, state);
-        LOG_I("%s/%s: Port status change. port:%d, virtual:%d, hidden:%d, input:%d, virtual_trig:%d, state:%d, activelow:%d", __FILE__, __FUNCTION__, port, virtual, hidden, input, virtual_trig, state, activelow)
+        LOG_I(
+            "%s/%s: Port status change. port:%d, virtual:%d, hidden:%d, input:%d, virtual_trig:%d, state:%d, "
+            "activelow:%d",
+            __FILE__,
+            __FUNCTION__,
+            port,
+            virtual,
+            hidden,
+            input,
+            virtual_trig,
+            state,
+            activelow)
     }
 }
 
@@ -137,25 +157,31 @@ static void add_tempsensors(void)
 
 static void add_ports(void)
 {
-    uint32_t countAll = 0;
-    uint32_t cntIn = 0;
-    uint32_t cntOut = 0;
+    uint32_t count_all = 0;
+    uint32_t count_in = 0;
+    uint32_t count_out = 0;
 
-    if (!dbus_get_number_of_ioports(&cntIn, &cntOut))
+    if (!dbus_get_number_of_ioports(&count_in, &count_out))
     {
         LOG_E("%s/%s: Failed to get number of ports", __FILE__, __FUNCTION__);
     }
     else
     {
-        countAll = cntIn + cntOut;
-        LOG_I("%s/%s: This device has %u input ports and %u output ports. (%u)", __FILE__, __FUNCTION__, cntIn, cntOut, countAll);
+        count_all = count_in + count_out;
+        LOG_I(
+            "%s/%s: This device has %u input ports and %u output ports. (%u)",
+            __FILE__,
+            __FUNCTION__,
+            count_in,
+            count_out,
+            count_all);
     }
 
     ports_t *ports_p = &ports;
-    ports_init(&ports_p, countAll);
-    assert(NULL !=ports_p);
+    ports_init(&ports_p, count_all);
+    assert(NULL != ports_p);
 
-    for (uint32_t i = 0; i < countAll; i++)
+    for (uint32_t i = 0; i < count_all; i++)
     {
         snprintf(ports.labels[i], PORT_LABEL_LEN, PORT_LABEL_FMT, i);
         LOG_I("%s/%s: Added label (%s) for port:%i", __FILE__, __FUNCTION__, ports.labels[i], i);
@@ -175,7 +201,6 @@ static void add_ports(void)
         ports.subid[i] = i;
     }
 }
-
 
 static gboolean launch_ua_server(const guint serverport)
 {

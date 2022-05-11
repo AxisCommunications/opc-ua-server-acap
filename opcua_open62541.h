@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Axis Communications AB, Lund, Sweden
+ * Copyright (C) 2022 Axis Communications AB, Lund, Sweden
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@
 void ua_server_init(UA_Server *s);
 bool ua_server_run(pthread_t *thread_id, UA_Boolean *running);
 
+void ua_server_add_bool(char *label, UA_Boolean state);
 void ua_server_add_double(char *label, UA_Double value);
+void ua_server_update_port(char *label, UA_Boolean state);
 void ua_server_update_temp(char *label, UA_Double value);
 
-void ua_server_add_bool(char *label, UA_Boolean state);
-void ua_server_update_port(char *label, UA_Boolean state);
 #endif /* _OPCUA_OPEN62541_H_ */

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Axis Communications AB, Lund, Sweden
+ * Copyright (C) 2022 Axis Communications AB, Lund, Sweden
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,17 @@ bool dbus_temp_unpack_signal(GVariant *parameters, uint32_t *subscription_id, do
 void dbus_connect_temp_g_signal(GCallback func);
 
 bool dbus_get_number_of_ioports(uint32_t *inputs, uint32_t *outputs);
-bool dbus_port_get_state(int id, bool *state);
-bool dbus_port_unpack_signal(GVariant *parameters, uint32_t *subscription_id, gint *port, gboolean *virtual, gboolean *hidden, gboolean *input, gboolean *virtual_trig, gboolean *state, gboolean *activelow);
+bool dbus_port_get_state(const int id, bool *state);
+bool dbus_port_unpack_signal(
+    GVariant *parameters,
+    uint32_t *subscription_id,
+    gint *port,
+    gboolean *virtual,
+    gboolean *hidden,
+    gboolean *input,
+    gboolean *virtual_trig,
+    gboolean *state,
+    gboolean *activelow);
 void dbus_connect_ports_g_signal(GCallback func);
 
 #endif /* _OPCUA_DBUS_H_ */
