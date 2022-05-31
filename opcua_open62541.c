@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Axis Communications AB, Lund, Sweden
+ * Copyright (C) 2022 Axis Communications AB, Lund, Sweden
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,38 @@ bool ua_server_run(pthread_t *thread_id, UA_Boolean *running)
     return true;
 }
 
+void ua_server_add_bool(char *label, UA_Boolean state)
+{
+    assert(NULL != server);
+    assert(NULL != label);
+
+    // Define attributes
+    UA_VariableAttributes attr = UA_VariableAttributes_default;
+
+    UA_Variant_setScalar(&attr.value, &state, &UA_TYPES[UA_TYPES_BOOLEAN]);
+
+    attr.description = UA_LOCALIZEDTEXT("en-US", label);
+    attr.displayName = UA_LOCALIZEDTEXT("en-US", label);
+    attr.dataType = UA_TYPES[UA_TYPES_BOOLEAN].typeId;
+    attr.accessLevel = UA_ACCESSLEVELMASK_READ;
+
+    // Add the variable node to the information model
+    UA_NodeId node_id = UA_NODEID_STRING(1, label);
+    UA_QualifiedName name = UA_QUALIFIEDNAME(1, label);
+    UA_NodeId parent_node_id = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
+    UA_NodeId parent_ref_node_id = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
+    UA_Server_addVariableNode(
+        server,
+        node_id,
+        parent_node_id,
+        parent_ref_node_id,
+        name,
+        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+        attr,
+        NULL,
+        NULL);
+}
+
 void ua_server_add_double(char *label, UA_Double value)
 {
     assert(NULL != server);
@@ -84,6 +116,15 @@ void ua_server_add_double(char *label, UA_Double value)
         attr,
         NULL,
         NULL);
+}
+
+void ua_server_update_port(char *label, UA_Boolean state)
+{
+    assert(NULL != server);
+    UA_Variant newvalue;
+    UA_Variant_setScalar(&newvalue, &state, &UA_TYPES[UA_TYPES_BOOLEAN]);
+    UA_NodeId currentNodeId = UA_NODEID_STRING(1, label);
+    UA_Server_writeValue(server, currentNodeId, newvalue);
 }
 
 void ua_server_update_temp(char *label, UA_Double value)

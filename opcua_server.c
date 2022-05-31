@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Axis Communications AB, Lund, Sweden
+ * Copyright (C) 2022 Axis Communications AB, Lund, Sweden
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,15 @@
 #include "opcua_common.h"
 #include "opcua_dbus.h"
 #include "opcua_open62541.h"
+#include "opcua_portsio.h"
 #include "opcua_tempsensors.h"
+
+#define SIGNALTEMPCHANGE "TemperatureChangeSignal"
+#define SIGNALPORTIOCHANGE "PortChanged"
 
 static AXParameter *axparameter = NULL;
 static tempsensors_t tempsensors;
+static ports_t ports;
 static UA_Server *server = NULL;
 static guint port = 0;
 static UA_Boolean ua_server_running = false;
@@ -49,18 +54,70 @@ static void on_dbus_signal(
     GVariant *parameters,
     G_GNUC_UNUSED gpointer user_data)
 {
-    uint32_t id;
+    uint32_t sub_id;
     double value;
-    if (!dbus_temp_unpack_signal(parameters, &id, &value))
+    char *label;
+
+    // Check which signal
+    // TemperatureChangeSignal
+    if (0 == strcmp(signal_name, SIGNALTEMPCHANGE))
     {
-        LOG_E(
-            "%s/%s: Failed to get values from signal %s sent by %s", __FILE__, __FUNCTION__, signal_name, sender_name);
-        return;
+        if (!dbus_temp_unpack_signal(parameters, &sub_id, &value))
+        {
+            LOG_E(
+                "%s/%s: Failed to get values from signal %s sent by %s",
+                __FILE__,
+                __FUNCTION__,
+                signal_name,
+                sender_name);
+            return;
+        }
+        label = tempsensors_get_label_from_subscription(&tempsensors, sub_id);
+        assert(NULL != label);
+        ua_server_update_temp(label, value);
+        LOG_I("%s/%s: New value for %s is %f", __FILE__, __FUNCTION__, label, value);
     }
-    char *label = tempsensors_get_label_from_subscription(&tempsensors, id);
-    assert(NULL != label);
-    ua_server_update_temp(label, value);
-    LOG_I("%s/%s: New value for %s is %f", __FILE__, __FUNCTION__, label, value);
+
+    gint port;
+    gboolean virtual;
+    gboolean hidden;
+    gboolean input;
+    gboolean virtual_trig;
+    gboolean state;
+    gboolean activelow;
+
+    // PortChanged
+    if (0 == strcmp(signal_name, SIGNALPORTIOCHANGE))
+    {
+        if (!dbus_port_unpack_signal(
+                parameters, &sub_id, &port, &virtual, &hidden, &input, &virtual_trig, &state, &activelow))
+        {
+            LOG_E(
+                "%s/%s: Failed to get values from signal %s sent by %s",
+                __FILE__,
+                __FUNCTION__,
+                signal_name,
+                sender_name);
+            return;
+        }
+
+        label = ports_get_label_from_subscription(&ports, sub_id);
+        assert(NULL != label);
+
+        ua_server_update_port(label, state);
+        LOG_I(
+            "%s/%s: Port status change. port:%d, virtual:%d, hidden:%d, input:%d, virtual_trig:%d, state:%d, "
+            "activelow:%d",
+            __FILE__,
+            __FUNCTION__,
+            port,
+            virtual,
+            hidden,
+            input,
+            virtual_trig,
+            state,
+            activelow)
+    }
 }
 
 static void add_tempsensors(void)
@@ -98,6 +155,53 @@ static void add_tempsensors(void)
     }
 }
 
+static void add_ports(void)
+{
+    uint32_t count_all = 0;
+    uint32_t count_in = 0;
+    uint32_t count_out = 0;
+
+    if (!dbus_get_number_of_ioports(&count_in, &count_out))
+    {
+        LOG_E("%s/%s: Failed to get number of ports", __FILE__, __FUNCTION__);
+    }
+    else
+    {
+        count_all = count_in + count_out;
+        LOG_I(
+            "%s/%s: This device has %u input ports and %u output ports. (%u)",
+            __FILE__,
+            __FUNCTION__,
+            count_in,
+            count_out,
+            count_all);
+    }
+
+    ports_t *ports_p = &ports;
+    ports_init(&ports_p, count_all);
+    assert(NULL != ports_p);
+
+    for (uint32_t i = 0; i < count_all; i++)
+    {
+        snprintf(ports.labels[i], PORT_LABEL_LEN, PORT_LABEL_FMT, i);
+        LOG_I("%s/%s: Added label (%s) for port:%i", __FILE__, __FUNCTION__, ports.labels[i], i);
+
+        bool state;
+        if (!dbus_port_get_state(i, &state))
+        {
+            LOG_E("%s/%s: Failed to get port state", __FILE__, __FUNCTION__);
+        }
+        else
+        {
+            LOG_I("%s/%s: Got state for port %i: %d", __FILE__, __FUNCTION__, i, state);
+            ua_server_add_bool(ports.labels[i], state);
+        }
+
+        assert(NULL != ports.subid);
+        ports.subid[i] = i;
+    }
+}
+
 static gboolean launch_ua_server(const guint serverport)
 {
     assert(NULL == server);
@@ -115,6 +219,9 @@ static gboolean launch_ua_server(const guint serverport)
 
     // Add temperature sensors to OPA UA server
     add_tempsensors();
+
+    // Add IO ports to OPC UA Server
+    add_ports();
 
     ua_server_running = true;
     LOG_I("%s/%s: Starting UA server ...", __FILE__, __FUNCTION__);
@@ -239,14 +346,17 @@ int main(int argc, char **argv)
 
     // Setup D-Bus
     LOG_I("%s/%s: Setup D-Bus", __FILE__, __FUNCTION__);
-    if (!dbus_temp_init())
+    if (!dbus_all_init())
     {
         LOG_E("%s/%s: Failed to setup D-Bus", __FILE__, __FUNCTION__);
     }
 
-    // Connect to D-Bus signal
+    // Connect to D-Bus signals
     LOG_I("%s/%s: Connect to D-Bus signal ...", __FILE__, __FUNCTION__);
-    dbus_connect_g_signal(G_CALLBACK(on_dbus_signal));
+    dbus_connect_temp_g_signal(G_CALLBACK(on_dbus_signal));
+
+    LOG_I("%s/%s: Connect to D-Bus signal ...", __FILE__, __FUNCTION__);
+    dbus_connect_ports_g_signal(G_CALLBACK(on_dbus_signal));
 
     // Setup parameters (will also launch OPC UA server)
     LOG_I("%s/%s: Setup parameters", __FILE__, __FUNCTION__);
@@ -262,7 +372,7 @@ int main(int argc, char **argv)
 
     // Cleanup and controlled shutdown
     LOG_I("%s/%s: Clean up DBus ...", __FILE__, __FUNCTION__);
-    dbus_temp_cleanup();
+    dbus_all_cleanup();
 
     LOG_I("%s/%s: Shut down UA server ...", __FILE__, __FUNCTION__);
     shutdown_ua_server();
@@ -270,6 +380,8 @@ int main(int argc, char **argv)
     LOG_I("%s/%s: Free data structures ...", __FILE__, __FUNCTION__);
     tempsensors_t *tempsensors_p = &tempsensors;
     tempsensors_free(&tempsensors_p);
+    ports_t *ports_p = &ports;
+    ports_free(&ports_p);
 
     LOG_I("%s/%s: Closing syslog ...", __FILE__, __FUNCTION__);
     close_syslog();
