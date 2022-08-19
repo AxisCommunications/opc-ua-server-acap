@@ -320,6 +320,7 @@ static gboolean setup_params(const char *appname)
 
     if (!setup_param("port", port_callback))
     {
+        ax_parameter_free(axparameter);
         return FALSE;
     }
 
@@ -371,6 +372,8 @@ int main(int argc, char **argv)
     g_main_loop_run(loop);
 
     // Cleanup and controlled shutdown
+    LOG_I("%s/%s: Free parameter handler ...", __FILE__, __FUNCTION__);
+    ax_parameter_free(axparameter);
     LOG_I("%s/%s: Clean up DBus ...", __FILE__, __FUNCTION__);
     dbus_all_cleanup();
 
@@ -382,6 +385,9 @@ int main(int argc, char **argv)
     tempsensors_free(&tempsensors_p);
     ports_t *ports_p = &ports;
     ports_free(&ports_p);
+
+    LOG_I("%s/%s: Unreference main loop ...", __FILE__, __FUNCTION__);
+    g_main_loop_unref(loop);
 
     LOG_I("%s/%s: Closing syslog ...", __FILE__, __FUNCTION__);
     close_syslog();
