@@ -7,8 +7,10 @@
 
 This directory contains the source code to build a small ACAP application that
 uses D-Bus to get
+
 - temperature sensor data from `com.axis.TemperatureController`
 - IO port states from `com.axis.IOControl.State`
+
 and expose them as [OPC UA](https://en.wikipedia.org/wiki/OPC_Unified_Architecture) with an
 [open62541](https://open62541.org/) server. It serves as an example of how easy
 it actually is to integrate any Axis device in an OPC UA system.
