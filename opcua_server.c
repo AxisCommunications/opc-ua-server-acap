@@ -210,12 +210,7 @@ static gboolean launch_ua_server(const guint serverport)
 
     // Create an OPC UA server
     LOG_I("%s/%s: Create UA server serving on port %u", __FILE__, __FUNCTION__, serverport);
-    server = UA_Server_new();
-    if (4840 != serverport)
-    {
-        UA_ServerConfig_setMinimal(UA_Server_getConfig(server), serverport, NULL);
-    }
-    ua_server_init(server);
+    ua_server_init(serverport);
 
     // Add temperature sensors to OPA UA server
     add_tempsensors();

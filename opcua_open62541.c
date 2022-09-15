@@ -33,11 +33,12 @@ static void *run_ua_server(void *running)
     return NULL;
 }
 
-void ua_server_init(UA_Server *s)
+void ua_server_init(const UA_UInt16 port)
 {
-    assert(NULL != s);
-    server = s;
-    UA_ServerConfig_setDefault(UA_Server_getConfig(server));
+    assert(NULL == server);
+    server = UA_Server_new();
+    assert(NULL != server);
+    UA_ServerConfig_setMinimal(UA_Server_getConfig(server), port, NULL);
 }
 
 bool ua_server_run(pthread_t *thread_id, UA_Boolean *running)
