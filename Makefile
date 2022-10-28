@@ -1,7 +1,8 @@
 .PHONY: %.eap dockerbuild 3rd-party-clean clean very-clean
 
 PROG = opcuaserver
-OBJS = opcua_server.o opcua_dbus.o opcua_open62541.o opcua_tempsensors.o opcua_portsio.o
+SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
 STRIP ?= strip
 
 PKGS =  gio-2.0 glib-2.0 axparameter
@@ -11,7 +12,7 @@ LDLIBS += $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --libs $(PKGS))
 # open62541
 OPEN62541_VERSION = 1.2.5
 OPEN62541 = open62541-$(OPEN62541_VERSION)
-OPEN62541_BUILD = $(OPEN62541)/build
+OPEN62541_BUILD = $(OPEN62541)/$(CROSS_COMPILE)build
 
 LIBOPEN62541 = $(OPEN62541_BUILD)/bin/libopen62541.a
 CFLAGS += -I $(OPEN62541)/include -I $(OPEN62541_BUILD)/src_generated -I $(OPEN62541)/arch -I $(OPEN62541)/deps -I $(OPEN62541)/plugins/include
@@ -53,10 +54,7 @@ dockerbuild: armv7hf.eap aarch64.eap
 	rm -rf $(OPEN62541_BUILD)
 
 clean:
-ifneq (,$(wildcard ./package.conf.orig))
-	mv package.conf.orig package.conf
-endif
-	rm -f $(PROG) *.o *.eap *LICENSE.txt
+	rm -f $(PROG) *.o *.eap *LICENSE.txt pa*conf*
 
 very-clean: clean 3rd-party-clean
 	rm -rf *.eap *.eap.old $(OPEN62541) eap
