@@ -45,7 +45,7 @@ $(LIBOPEN62541): $(OPEN62541_BUILD)/Makefile
 
 # docker build container targets
 %.eap:
-	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=$(@:.eap=) -o type=local,dest=. "$(CURDIR)"
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=$(basename $@) -o type=local,dest=. "$(CURDIR)"
 
 dockerbuild: armv7hf.eap aarch64.eap
 
