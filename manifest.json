@@ -18,11 +18,11 @@
             "vendor": "Axis Communications AB",
             "embeddedSdkVersion": "2.0",
             "runMode": "respawn",
-            "version": "1.2.0"
+            "version": "1.2.1"
         },
         "configuration": {
             "paramConfig": [
-                {"name": "port", "type": "int:min=1", "default": "4840"}
+                {"name": "port", "type": "int:min=1024,max=65535", "default": "4840"}
             ]
         }
     }
