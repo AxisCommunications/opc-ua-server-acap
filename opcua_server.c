@@ -207,6 +207,7 @@ static gboolean launch_ua_server(const guint serverport)
     assert(NULL == server);
     assert(0 < serverport);
     assert(!ua_server_running);
+    assert(1024 <= serverport && 65535 >= serverport);
 
     // Create an OPC UA server
     LOG_I("%s/%s: Create UA server serving on port %u", __FILE__, __FUNCTION__, serverport);
@@ -219,7 +220,7 @@ static gboolean launch_ua_server(const guint serverport)
     add_ports();
 
     ua_server_running = true;
-    LOG_I("%s/%s: Starting UA server ...", __FILE__, __FUNCTION__);
+    LOG_I("%s/%s: Starting UA server on port %u ...", __FILE__, __FUNCTION__, serverport);
     if (!ua_server_run(&ua_server_thread_id, &ua_server_running))
     {
         LOG_E("%s/%s: Failed to launch UA server", __FILE__, __FUNCTION__);
@@ -248,7 +249,8 @@ static void port_callback(const gchar *name, const gchar *value, void *data)
     (void)data;
     /* Translate parameter value to number; atoi can handle NULL */
     int newport = atoi(value);
-    if (1 > newport)
+    /* Only allow non-privileged ports */
+    if (1024 > newport || 65535 < newport)
     {
         LOG_E("%s/%s: illegal value for %s: '%s'", __FILE__, __FUNCTION__, name, value);
         return;
