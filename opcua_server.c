@@ -29,6 +29,7 @@
 #define SIGNALTEMPCHANGE "TemperatureChangeSignal"
 #define SIGNALPORTIOCHANGE "PortChanged"
 
+static GMainLoop *main_loop = NULL;
 static AXParameter *axparameter = NULL;
 static tempsensors_t tempsensors;
 static ports_t ports;
@@ -232,16 +233,16 @@ static gboolean launch_ua_server(const guint serverport)
 
 static void shutdown_ua_server(void)
 {
-    assert(ua_server_running);
-    assert(NULL != server);
-
-    ua_server_running = false;
-    LOG_I("%s/%s: Stop UA server ...", __FILE__, __FUNCTION__);
-    pthread_join(ua_server_thread_id, NULL);
-    LOG_I("%s/%s: Delete UA server ...", __FILE__, __FUNCTION__);
-    UA_Server_run_shutdown(server);
-    UA_Server_delete(server);
-    server = NULL;
+    if (ua_server_running && NULL != server)
+    {
+        ua_server_running = false;
+        LOG_I("%s/%s: UA server still running, stopping it ...", __FILE__, __FUNCTION__);
+        pthread_join(ua_server_thread_id, NULL);
+        LOG_I("%s/%s: Delete UA server ...", __FILE__, __FUNCTION__);
+        UA_Server_run_shutdown(server);
+        UA_Server_delete(server);
+        server = NULL;
+    }
 }
 
 static void port_callback(const gchar *name, const gchar *value, void *data)
@@ -324,20 +325,47 @@ static gboolean setup_params(const char *appname)
     return TRUE;
 }
 
-static void init_signals(void)
+static void signal_handler(gint signal_num)
 {
-    struct sigaction sa;
+    switch (signal_num)
+    {
+    case SIGTERM:
+    case SIGABRT:
+    case SIGINT:
+        g_main_loop_quit(main_loop);
+        break;
+    default:
+        break;
+    }
+}
 
-    sigemptyset(&sa.sa_mask);
-    sigaddset(&sa.sa_mask, SIGPIPE);
-    sa.sa_flags = 0;
-    sa.sa_handler = SIG_IGN;
-    sigaction(SIGPIPE, &sa, NULL);
+static gboolean signal_handler_init(void)
+{
+    struct sigaction sa = {0};
+
+    if (-1 == sigemptyset(&sa.sa_mask))
+    {
+        LOG_E("%s/%s: Failed to initialize signal handler: %s", __FILE__, __FUNCTION__, strerror(errno));
+        return FALSE;
+    }
+
+    sa.sa_handler = signal_handler;
+
+    if (0 > sigaction(SIGTERM, &sa, NULL) || 0 > sigaction(SIGABRT, &sa, NULL) || 0 > sigaction(SIGINT, &sa, NULL))
+    {
+        LOG_E("%s/%s: Failed to install signal handler: %s", __FILE__, __FUNCTION__, strerror(errno));
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 int main(int argc, char **argv)
 {
-    init_signals();
+    if (!signal_handler_init())
+    {
+        return -1;
+    }
 
     char *app_name = basename(argv[0]);
     open_syslog(app_name);
@@ -365,8 +393,9 @@ int main(int argc, char **argv)
 
     // Main loop
     LOG_I("%s/%s: Ready", __FILE__, __FUNCTION__);
-    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
-    g_main_loop_run(loop);
+    assert(NULL == main_loop);
+    main_loop = g_main_loop_new(NULL, FALSE);
+    g_main_loop_run(main_loop);
 
     // Cleanup and controlled shutdown
     LOG_I("%s/%s: Free parameter handler ...", __FILE__, __FUNCTION__);
@@ -384,7 +413,7 @@ int main(int argc, char **argv)
     ports_free(&ports_p);
 
     LOG_I("%s/%s: Unreference main loop ...", __FILE__, __FUNCTION__);
-    g_main_loop_unref(loop);
+    g_main_loop_unref(main_loop);
 
     LOG_I("%s/%s: Closing syslog ...", __FILE__, __FUNCTION__);
     close_syslog();

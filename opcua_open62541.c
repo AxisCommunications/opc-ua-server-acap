@@ -30,6 +30,7 @@ static void *run_ua_server(void *running)
     LOG_I("%s/%s: Starting UA server ...", __FILE__, __FUNCTION__);
     UA_StatusCode status = UA_Server_run(server, running);
     LOG_I("%s/%s: UA Server exit status: %s", __FILE__, __FUNCTION__, UA_StatusCode_name(status));
+    UA_Server_delete(server);
     return NULL;
 }
 
