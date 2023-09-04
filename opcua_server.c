@@ -45,7 +45,8 @@ static void open_syslog(const char *app_name)
 
 static void close_syslog(void)
 {
-    LOG_I("Exiting!");
+    LOG_I("%s/%s: Exiting!", __FILE__, __FUNCTION__);
+    closelog();
 }
 
 static void on_dbus_signal(
@@ -233,16 +234,9 @@ static gboolean launch_ua_server(const guint serverport)
 
 static void shutdown_ua_server(void)
 {
-    if (ua_server_running && NULL != server)
-    {
-        ua_server_running = false;
-        LOG_I("%s/%s: UA server still running, stopping it ...", __FILE__, __FUNCTION__);
-        pthread_join(ua_server_thread_id, NULL);
-        LOG_I("%s/%s: Delete UA server ...", __FILE__, __FUNCTION__);
-        UA_Server_run_shutdown(server);
-        UA_Server_delete(server);
-        server = NULL;
-    }
+    assert(ua_server_running);
+    ua_server_running = false;
+    pthread_join(ua_server_thread_id, NULL);
 }
 
 static void port_callback(const gchar *name, const gchar *value, void *data)
