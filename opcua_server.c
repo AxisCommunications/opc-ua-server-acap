@@ -356,13 +356,13 @@ static gboolean signal_handler_init(void)
 
 int main(int argc, char **argv)
 {
-    if (!signal_handler_init())
-    {
-        return -1;
-    }
-
     char *app_name = basename(argv[0]);
     open_syslog(app_name);
+
+    if (!signal_handler_init())
+    {
+        return EXIT_FAILURE;
+    }
 
     // Setup D-Bus
     LOG_I("%s/%s: Setup D-Bus", __FILE__, __FUNCTION__);
@@ -412,5 +412,5 @@ int main(int argc, char **argv)
     LOG_I("%s/%s: Closing syslog ...", __FILE__, __FUNCTION__);
     close_syslog();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
