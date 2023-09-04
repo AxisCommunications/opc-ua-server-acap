@@ -3,7 +3,7 @@ ARG ACAP_SDK_VERSION=3.5
 ARG SDK_IMAGE=axisecp/acap-sdk
 ARG BUILD_DIR=/usr/local/src/server-acap
 
-FROM $SDK_IMAGE:$ACAP_SDK_VERSION-$ARCH as builder
+FROM $SDK_IMAGE:$ACAP_SDK_VERSION-$ARCH AS builder
 ARG BUILD_DIR
 # hadolint ignore=DL3008
 RUN DEBIAN_FRONTEND=noninteractive \
