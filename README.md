@@ -18,9 +18,10 @@ it actually is to integrate any Axis device in an OPC UA system.
 
 ![Architectural overview](images/acap_architecture.svg)
 
-*Please note that even if this ACAP would fit right into your usecase, its
-purpose is above all to serve as an example and boilerplate rather than being
-ready for production.*
+> [!NOTE]
+> Even if this application would fit right into your usecase, its purpose is
+> above all to serve as an example and boilerplate rather than being ready for
+> production.
 
 ## Build
 
@@ -59,10 +60,10 @@ DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -o type=local,dest=. .
 
 ### Manual installation and configuration
 
-Upload the ACAP file (the file with the `.eap` extension for the camera's
-architecture) through the camera's web UI: *Apps->Add app*
+Upload the ACAP application file (the file with the `.eap` extension for the
+camera's architecture) through the camera's web UI: *Apps->Add app*
 
-The OPC UA Server port (default is 4840) can be set through the ACAP's
+The OPC UA Server port (default is 4840) can be set through the application's
 parameter settings, found in the three vertical dots menu:
 
 ![Web UI Screenshot](images/web_ui_open_param_settings.png)
@@ -73,8 +74,8 @@ parameter settings, found in the three vertical dots menu:
 
 Use the camera's
 [applications/upload.cgi](https://www.axis.com/vapix-library/subjects/t10102231/section/t10036126/display?section=t10036126-t10010609)
-to upload the ACAP file (the file with the `.eap` extension for the camera's
-architecture):
+to upload the ACAP application file (the file with the `.eap` extension for the
+camera's architecture):
 
 ```sh
 curl -k --anyauth -u root:<password> \
@@ -84,7 +85,7 @@ curl -k --anyauth -u root:<password> \
 
 To
 [start (or stop/restart/remove)](https://www.axis.com/vapix-library/subjects/t10102231/section/t10036126/display?section=t10036126-t10010606)
-the ACAP, you can make a call like this:
+the application, you can make a call like this:
 
 ```sh
 curl -k --anyauth -u root:<password> \
@@ -120,7 +121,8 @@ curl -k --anyauth -u root:<password> \
 Attach an OPC UA client to the port set in the ACAP. The client will then be
 able to read the values (and their timestamps) from the ACAP's OPC UA server.
 
-The ACAP will also log the values in the camera's syslog.
+> [!NOTE]
+> The application will also log the values in the camera's syslog.
 
 ## License
 
