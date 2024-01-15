@@ -5,13 +5,13 @@
             "appName": "opcuaserver",
             "friendlyName": "OPC UA Server",
             "vendor": "Axis Communications AB",
-            "embeddedSdkVersion": "2.0",
+            "embeddedSdkVersion": "3.0",
             "user": {
                 "username": "sdk",
                 "group": "sdk"
             },
             "runMode": "respawn",
-            "version": "1.2.5"
+            "version": "1.2.6"
         },
         "configuration": {
             "paramConfig": [
