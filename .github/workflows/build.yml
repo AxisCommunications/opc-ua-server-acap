@@ -24,4 +24,4 @@ jobs:
         run: |
           make clean
           echo 'Make sure no ACAP files are left:'
-          [ -z "$(ls ./*.eap ./*LICENSE.txt)" ]
+          [ -z "$(ls ./*.eap* ./*LICENSE.txt)" ]

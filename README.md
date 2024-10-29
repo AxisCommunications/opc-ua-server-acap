@@ -1,13 +1,13 @@
-*Copyright (C) 2022, Axis Communications AB, Lund, Sweden. All Rights Reserved.*
+*Copyright (C) 2024, Axis Communications AB, Lund, Sweden. All Rights Reserved.*
 
 # OPC UA Server ACAP
 
-[![Build ACAPs](https://github.com/AxisCommunications/opc-ua-server-acap/actions/workflows/build.yml/badge.svg)](https://github.com/AxisCommunications/opc-ua-server-acap/actions/workflows/build.yml)
+[![Build ACAP packages](https://github.com/AxisCommunications/opc-ua-server-acap/actions/workflows/build.yml/badge.svg)](https://github.com/AxisCommunications/opc-ua-server-acap/actions/workflows/build.yml)
 [![GitHub Super-Linter](https://github.com/AxisCommunications/opc-ua-server-acap/actions/workflows/super-linter.yml/badge.svg)](https://github.com/AxisCommunications/opc-ua-server-acap/actions/workflows/super-linter.yml)
 
 This repository contains the source code to build a small example
-[ACAP version 3](https://help.axis.com/acap-3-developer-guide)
-application that uses D-Bus to get
+[ACAP version 4](https://axiscommunications.github.io/acap-documentation/)
+(native) application that uses D-Bus to get
 
 - temperature sensor data from `com.axis.TemperatureController`
 - IO port states from `com.axis.IOControl.State`
@@ -25,17 +25,16 @@ it actually is to integrate any Axis device in an OPC UA system.
 
 ## Build
 
-### On developer computer with ACAP SDK installed
+The build step creates `eap` (embedded application package) packages that can
+then be deployed on the target Axis device e.g. via the device's web UI.
 
-```sh
-# With the environment initialized, use:
-acap-build .
-```
+*For more information about the `eap` files, their content, and other ways to
+deploy, please see the documentation on how to
+[Develop ACAP applications](https://axiscommunications.github.io/acap-documentation/docs/develop/).*
 
-### Using ACAP SDK build container and Docker
-
-The handling of this is integrated in the [Makefile](Makefile), so if you have
-Docker and `make` on your computer all you need to do is:
+The build uses [Docker](https://www.docker.com/) and the containerized ACAP SDK.
+If you have `make` on your computer the Docker commands are nicely wrapped in
+the [Makefile](Makefile). All you need to do then is:
 
 ```sh
 make dockerbuild
@@ -118,8 +117,9 @@ curl -k --anyauth -u root:<password> \
 
 ## Usage
 
-Attach an OPC UA client to the port set in the ACAP. The client will then be
-able to read the values (and their timestamps) from the ACAP's OPC UA server.
+Attach an OPC UA client to the port set in the ACAP application. The client
+will then be able to read the values (and their timestamps) from the ACAP
+application's OPC UA server.
 
 > [!NOTE]
 > The application will also log the values in the camera's syslog.

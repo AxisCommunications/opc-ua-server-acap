@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <assert.h>
 #include <open62541/server_config_default.h>
 #include <pthread.h>
 
