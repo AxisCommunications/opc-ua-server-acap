@@ -1,9 +1,10 @@
-.PHONY: %.eap dockerbuild clean
+.PHONY: %.docker %.podman dockerbuild podmanbuild clean
 
 PROG = opcuaserver
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 STRIP ?= strip
+ARCHS = aarch64 armv7hf
 
 PKGS =  gio-2.0 glib-2.0 axparameter open62541
 CFLAGS += $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --cflags $(PKGS))
@@ -19,11 +20,12 @@ all: $(PROG)
 $(PROG): $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) $(LDLIBS) -o $@
 
-# docker build container targets
-%.eap:
-	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=$(*F) -o type=local,dest=. "$(CURDIR)"
+# container build targets
+%.docker %.podman:
+	DOCKER_BUILDKIT=1 $(patsubst .%,%,$(suffix $@)) build --build-arg ARCH=$(*F) -o type=local,dest=. "$(CURDIR)"
 
-dockerbuild: armv7hf.eap aarch64.eap
+dockerbuild: $(addsuffix .docker,$(ARCHS))
+podmanbuild: $(addsuffix .podman,$(ARCHS))
 
 # clean targets
 clean:

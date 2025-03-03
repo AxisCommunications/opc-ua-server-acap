@@ -1,5 +1,5 @@
 {
-    "schemaVersion": "1.7.0",
+    "schemaVersion": "1.7.3",
     "acapPackageConf": {
         "setup": {
             "appName": "opcuaserver",
@@ -8,7 +8,7 @@
             "embeddedSdkVersion": "3.0",
             "vendorUrl": "https://www.axis.com/",
             "runMode": "respawn",
-            "version": "2.0.0"
+            "version": "2.1.0"
         },
         "configuration": {
             "paramConfig": [
