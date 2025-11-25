@@ -1,5 +1,5 @@
 ARG ARCH=aarch64
-ARG SDK_VERSION=12.2.0
+ARG SDK_VERSION=12.7.0
 ARG SDK_IMAGE=docker.io/axisecp/acap-native-sdk
 ARG BUILD_DIR=/usr/local/src
 ARG ACAP_BUILD_DIR="$BUILD_DIR"/server-acap
