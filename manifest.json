@@ -4,11 +4,10 @@
         "setup": {
             "appName": "opcuaserver",
             "friendlyName": "OPC UA Server",
-            "vendor": "Axis Communications AB",
-            "embeddedSdkVersion": "3.0",
+            "vendor": "Axis Communications",
             "vendorUrl": "https://www.axis.com/",
             "runMode": "respawn",
-            "version": "2.2.0"
+            "version": "2.2.1"
         },
         "configuration": {
             "paramConfig": [

@@ -92,7 +92,7 @@ bool dbus_temp_get_number_of_sensors(uint32_t *count)
         g_error_free(error);
         return false;
     }
-    LOG_I("%s/%s: Got number of temperature sensors response from D-Bus!", __FILE__, __FUNCTION__);
+    LOG_I("✅ Got number of temperature sensors response from D-Bus!");
     GVariant *value = g_variant_get_child_value(result, 0);
     if (!value)
     {
@@ -127,7 +127,7 @@ bool dbus_temp_get_value(int id, double *value)
         g_error_free(error);
         return false;
     }
-    LOG_I("%s/%s: Got temperature response from D-Bus for sensor %i!", __FILE__, __FUNCTION__, id);
+    LOG_I("ⓘ Got temperature response from D-Bus for sensor %i", id);
     GVariant *gvalue = g_variant_get_child_value(result, 0);
     if (!gvalue)
     {
@@ -167,7 +167,7 @@ bool dbus_temp_subscribe_to_change(uint32_t *subscription_id, uint32_t sensor_id
         g_error_free(error);
         return false;
     }
-    LOG_I("%s/%s: Subscribed to temperature change signal for sensor %i!", __FILE__, __FUNCTION__, sensor_id);
+    LOG_I("✅ Subscribed to temperature change signal for sensor %i!", sensor_id);
     GVariant *value = g_variant_get_child_value(result, 0);
     if (!value)
     {
@@ -178,8 +178,7 @@ bool dbus_temp_subscribe_to_change(uint32_t *subscription_id, uint32_t sensor_id
     *subscription_id = g_variant_get_int32(value);
     g_variant_unref(value);
     g_variant_unref(result);
-    LOG_I(
-        "%s/%s: Subscribed sensor %i got register response id %i", __FILE__, __FUNCTION__, sensor_id, *subscription_id);
+    LOG_I("ⓘ Subscribed sensor %i got register response id %i", sensor_id, *subscription_id);
     return true;
 }
 
@@ -240,7 +239,7 @@ bool dbus_get_number_of_ioports(uint32_t *inputs, uint32_t *outputs)
         g_error_free(error);
         return false;
     }
-    LOG_I("%s/%s: Got number of ports response from D-Bus!", __FILE__, __FUNCTION__);
+    LOG_I("ⓘ Got number of ports response from D-Bus!");
 
     if (ret_val)
     {
@@ -267,7 +266,7 @@ bool dbus_port_get_state(const int id, bool *state)
         return false;
     }
 
-    LOG_I("%s/%s: Got state response from D-Bus for port %i!", __FILE__, __FUNCTION__, id);
+    LOG_I("ⓘ Got state response from D-Bus for port %i", id);
 
     GVariant *gvalue = g_variant_get_child_value(result, 0);
     if (!gvalue)
