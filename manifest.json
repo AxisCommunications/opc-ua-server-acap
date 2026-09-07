@@ -8,7 +8,7 @@
             "embeddedSdkVersion": "3.0",
             "vendorUrl": "https://www.axis.com/",
             "runMode": "respawn",
-            "version": "2.1.0"
+            "version": "2.2.0"
         },
         "configuration": {
             "paramConfig": [
@@ -22,6 +22,7 @@
                 "com.axis.IOControl.State.GetNbrPorts",
                 "com.axis.IOControl.State.GetState",
                 "com.axis.TemperatureController.GetNbrOfTemperatureSensors",
+                "com.axis.TemperatureController.GetTemperature",
                 "com.axis.TemperatureController.RegisterForTemperatureChangeSignal"
             ]
         }

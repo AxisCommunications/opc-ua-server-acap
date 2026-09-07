@@ -18,9 +18,11 @@
 #define _OPCUA_OPEN62541_H_
 
 #include <open62541/server.h>
+#include <pthread.h>
 
-void ua_server_init(const UA_UInt16 port);
+bool ua_server_init(const UA_UInt16 port);
 bool ua_server_run(pthread_t *thread_id, UA_Boolean *running);
+void ua_server_stop(UA_Boolean *running);
 
 void ua_server_add_bool(char *label, UA_Boolean state);
 void ua_server_add_double(char *label, UA_Double value);

@@ -21,7 +21,8 @@ applyTo: "**"
 
 - Keep `manifest.json`, the application executable, and AXParameter group aligned: `appName` and `PROG` are both `opcuaserver`.
 - The manifest parameter `port` is an integer in the inclusive range `1024..65535`, defaulting to `4840`. Keep its name, range, default, and `port_callback()` validation synchronized.
-- A port change intentionally stops, joins, and recreates the OPC UA server. Preserve the `ua_server_running` lifecycle and do not add access to the global `UA_Server` from uncoordinated threads.
+- The `UA_Server` runs independently on its own worker thread. Serialize all `UA_Server` calls, including iterations, node updates, and shutdown, with its mutex; do not access it concurrently from the GLib main-loop thread.
+- A port change intentionally stops, joins, and recreates the OPC UA server. Preserve the `ua_server_running` lifecycle.
 - When adding a D-Bus capability, update all applicable surfaces together: manifest `resources.dbus.requiredMethods`, D-Bus service/object/interface constants and method or signal parsing in `opcua_dbus.c`, initialization or signal handling in `opcua_server.c`, and OPC UA node creation/update in `opcua_open62541.c`.
 - Temperature nodes are `Double` values and I/O-port nodes are `Boolean` values. Labels must remain consistent between initial node creation and later updates because they are used as namespace-1 string node IDs.
 - Preserve D-Bus ownership rules: unref successful `GVariant` results and proxies, free `GError` values after handling them, and do not use a result value when the call returned `NULL`.
@@ -30,9 +31,13 @@ applyTo: "**"
 
 - Build with the project C flags, including `-Wall`, `-Werror`, `-Wformat=2`, and strict prototype checks. Treat warnings as errors.
 - Follow the existing C style: 4-space indentation, Allman braces, declarations at the start of a block, `NULL != value` comparisons, braces also around single-line blocks, and explicit error paths.
+- Name file-static variables with a trailing underscore; keep function parameters and local variables unsuffixed unless another established convention applies.
 - New C source and header files use the existing Apache-2.0 Axis copyright and license header.
 - Use `LOG_I` and `LOG_E` from `opcua_common.h`, retaining the existing `__FILE__/__FUNCTION__` error-context convention.
 - Retain assertions for internal invariants, but use explicit return-value and `GError` handling for external failures.
+- Always assert function parameters at the start of the function.
+- Never trust external input without validation.
+- Never dereference a pointer without first making sure that it is not `NULL`.
 - Preserve the GLib and open62541 types at their API boundaries, rather than substituting incompatible standard C types.
 - Always set `const` on anything that can be `const`.
 
