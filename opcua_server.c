@@ -44,7 +44,7 @@ static void open_syslog(const char *app_name)
 
 static void close_syslog(void)
 {
-    LOG_I("%s/%s: Exiting!", __FILE__, __FUNCTION__);
+    LOG_I("✅ Exiting!");
     closelog();
 }
 
@@ -76,7 +76,7 @@ static void on_dbus_signal(
         label = tempsensors_get_label_from_subscription(&tempsensors_, sub_id);
         assert(NULL != label);
         ua_server_update_temp(label, value);
-        LOG_I("%s/%s: New value for %s is %f", __FILE__, __FUNCTION__, label, value);
+        LOG_I("ⓘ New value for %s is %f", label, value);
     }
 
     gint port;
@@ -107,10 +107,8 @@ static void on_dbus_signal(
 
         ua_server_update_port(label, state);
         LOG_I(
-            "%s/%s: Port status change. port:%d, virtual:%d, hidden:%d, input:%d, virtual_trig:%d, state:%d, "
+            "ⓘ Port status change. port:%d, virtual:%d, hidden:%d, input:%d, virtual_trig:%d, state:%d, "
             "activelow:%d",
-            __FILE__,
-            __FUNCTION__,
             port,
             virtual,
             hidden,
@@ -130,7 +128,7 @@ static void add_tempsensors(void)
     }
     else
     {
-        LOG_I("%s/%s: This device has %u temperature sensors", __FILE__, __FUNCTION__, count);
+        LOG_I("ⓘ This device has %u temperature sensor%s", count, 1 == count ? "" : "s");
     }
     tempsensors_init(&tempsensors_, count);
     for (uint32_t i = 0; i < count; i++)
@@ -143,7 +141,7 @@ static void add_tempsensors(void)
         }
         else
         {
-            LOG_I("%s/%s: Got temperature for sensor %i: %f", __FILE__, __FUNCTION__, i, value);
+            LOG_I("ⓘ Temperature for sensor %i is %f", i, value);
             ua_server_add_double(tempsensors_.labels[i], value);
         }
         assert(NULL != tempsensors_.subid);
@@ -168,11 +166,11 @@ static void add_ports(void)
     {
         count_all = count_in + count_out;
         LOG_I(
-            "%s/%s: This device has %u input ports and %u output ports. (%u)",
-            __FILE__,
-            __FUNCTION__,
+            "ⓘ This device has %u input port%s and %u output port%s (%u ports in total)",
             count_in,
+            1 == count_in ? "" : "s",
             count_out,
+            1 == count_out ? "" : "s",
             count_all);
     }
 
@@ -182,7 +180,7 @@ static void add_ports(void)
     for (uint32_t i = 0; i < count_all; i++)
     {
         snprintf(ports_.labels[i], PORT_LABEL_LEN, PORT_LABEL_FMT, i);
-        LOG_I("%s/%s: Added label (%s) for port:%i", __FILE__, __FUNCTION__, ports_.labels[i], i);
+        LOG_I("ⓘ Added label '%s' for port %i", ports_.labels[i], i);
 
         if (!dbus_port_get_state(i, &state))
         {
@@ -190,7 +188,7 @@ static void add_ports(void)
         }
         else
         {
-            LOG_I("%s/%s: Got state for port %i: %d", __FILE__, __FUNCTION__, i, state);
+            LOG_I("ⓘ Got state for port %i: %d", i, state);
             ua_server_add_bool(ports_.labels[i], state);
         }
 
@@ -206,7 +204,7 @@ static gboolean launch_ua_server(const guint serverport)
     assert(1024 <= serverport && 65535 >= serverport);
 
     // Create an OPC UA server
-    LOG_I("%s/%s: Create UA server serving on port %u", __FILE__, __FUNCTION__, serverport);
+    LOG_I("⏳ Creating UA server serving on port %u ...", serverport);
     if (!ua_server_init(serverport))
     {
         LOG_E("%s/%s: Failed to create OPC UA server", __FILE__, __FUNCTION__);
@@ -219,7 +217,7 @@ static gboolean launch_ua_server(const guint serverport)
     // Add IO ports to OPC UA Server
     add_ports();
 
-    LOG_I("%s/%s: Starting UA server on port %u ...", __FILE__, __FUNCTION__, serverport);
+    LOG_I("⏳ Starting UA server on port %u ...", serverport);
     ua_server_running_ = true;
     if (!ua_server_run(&ua_server_thread_id_, &ua_server_running_))
     {
@@ -250,7 +248,7 @@ static void port_callback(const gchar *name, const gchar *value, void *data)
         return;
     }
     port_ = newport;
-    LOG_I("%s/%s: OPC UA server %s is %u", __FILE__, __FUNCTION__, name, port_);
+    LOG_I("✅ Parameter '%s' now updated to %u", name, port_);
 
     if (ua_server_running_)
     {
@@ -291,7 +289,7 @@ static gboolean setup_param(const gchar *name, AXParameterCallback callbackfn)
         }
         return FALSE;
     }
-    LOG_I("%s/%s: Got %s value: %s", __FILE__, __FUNCTION__, name, value);
+    LOG_I("✅ Got '%s' value: %s", name, value);
     callbackfn(name, value, NULL);
     g_free(value);
 
@@ -367,54 +365,54 @@ int main(int argc, char **argv)
     }
 
     // Setup D-Bus
-    LOG_I("%s/%s: Setup D-Bus", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Setting up D-Bus ...");
     if (!dbus_all_init())
     {
         LOG_E("%s/%s: Failed to setup D-Bus", __FILE__, __FUNCTION__);
     }
 
     // Connect to D-Bus signals
-    LOG_I("%s/%s: Connect to D-Bus signal ...", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Connecting to D-Bus signal for temperatures ...");
     dbus_connect_temp_g_signal(G_CALLBACK(on_dbus_signal));
 
-    LOG_I("%s/%s: Connect to D-Bus signal ...", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Connecting to D-Bus signal for ports ...");
     dbus_connect_ports_g_signal(G_CALLBACK(on_dbus_signal));
 
     // Setup parameters (will also launch OPC UA server)
-    LOG_I("%s/%s: Setup parameters", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Setting up parameters ...");
     if (!setup_params(app_name))
     {
         LOG_E("%s/%s: Failed to setup parameters", __FILE__, __FUNCTION__);
     }
 
     // Main loop
-    LOG_I("%s/%s: Ready", __FILE__, __FUNCTION__);
+    LOG_I("✅ Ready");
     assert(NULL == main_loop_);
     main_loop_ = g_main_loop_new(NULL, FALSE);
     g_main_loop_run(main_loop_);
 
     // Cleanup and controlled shutdown
-    LOG_I("%s/%s: Free parameter handler ...", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Freeing parameter handler ...");
     ax_parameter_free(axparameter_);
-    LOG_I("%s/%s: Clean up DBus ...", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Cleaning up D-Bus ...");
     dbus_all_cleanup();
 
-    LOG_I("%s/%s: Shut down UA server ...", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Shutting down UA server ...");
     if (ua_server_running_)
     {
         shutdown_ua_server();
     }
 
-    LOG_I("%s/%s: Free data structures ...", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Freeing data structures ...");
     tempsensors_t *tempsensors_p = &tempsensors_;
     tempsensors_free(&tempsensors_p);
     ports_t *ports_p = &ports_;
     ports_free(&ports_p);
 
-    LOG_I("%s/%s: Unreference main loop ...", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Unreferencing main loop ...");
     g_main_loop_unref(main_loop_);
 
-    LOG_I("%s/%s: Closing syslog ...", __FILE__, __FUNCTION__);
+    LOG_I("⏳ Closing syslog ...");
     close_syslog();
 
     return EXIT_SUCCESS;

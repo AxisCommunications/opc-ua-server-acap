@@ -67,7 +67,7 @@ static void *run_ua_server(void *running)
     server_ = NULL;
     pthread_mutex_unlock(&server_mutex_);
 
-    LOG_I("%s/%s: UA Server exit status: %s", __FILE__, __FUNCTION__, UA_StatusCode_name(status));
+    LOG_I("🚪 UA Server exit status is '%s'", UA_StatusCode_name(status));
     return NULL;
 }
 
