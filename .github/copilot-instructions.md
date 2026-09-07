@@ -1,5 +1,5 @@
 ---
-description: Repository guidance for the OPC UA Server ACAP application: C code, D-Bus and OPC UA contracts, manifest configuration, packaging, builds, and validation.
+description: "Repository guidance for the OPC UA Server ACAP application: C code, D-Bus and OPC UA contracts, manifest configuration, packaging, builds, and validation."
 applyTo: "**"
 ---
 
