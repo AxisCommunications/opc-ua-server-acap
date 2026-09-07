@@ -29,14 +29,13 @@
 #define SIGNALTEMPCHANGE "TemperatureChangeSignal"
 #define SIGNALPORTIOCHANGE "PortChanged"
 
-static GMainLoop *main_loop = NULL;
-static AXParameter *axparameter = NULL;
-static tempsensors_t tempsensors;
-static ports_t ports;
-static UA_Server *server = NULL;
-static guint port = 0;
-static UA_Boolean ua_server_running = false;
-static pthread_t ua_server_thread_id;
+static GMainLoop *main_loop_ = NULL;
+static AXParameter *axparameter_ = NULL;
+static tempsensors_t tempsensors_;
+static ports_t ports_;
+static guint port_ = 0;
+static UA_Boolean ua_server_running_ = false;
+static pthread_t ua_server_thread_id_;
 
 static void open_syslog(const char *app_name)
 {
@@ -74,7 +73,7 @@ static void on_dbus_signal(
                 sender_name);
             return;
         }
-        label = tempsensors_get_label_from_subscription(&tempsensors, sub_id);
+        label = tempsensors_get_label_from_subscription(&tempsensors_, sub_id);
         assert(NULL != label);
         ua_server_update_temp(label, value);
         LOG_I("%s/%s: New value for %s is %f", __FILE__, __FUNCTION__, label, value);
@@ -103,7 +102,7 @@ static void on_dbus_signal(
             return;
         }
 
-        label = ports_get_label_from_subscription(&ports, sub_id);
+        label = ports_get_label_from_subscription(&ports_, sub_id);
         assert(NULL != label);
 
         ua_server_update_port(label, state);
@@ -133,12 +132,10 @@ static void add_tempsensors(void)
     {
         LOG_I("%s/%s: This device has %u temperature sensors", __FILE__, __FUNCTION__, count);
     }
-    tempsensors_t *tempsensors_p = &tempsensors;
-    tempsensors_init(&tempsensors_p, count);
-    assert(NULL != tempsensors_p);
+    tempsensors_init(&tempsensors_, count);
     for (uint32_t i = 0; i < count; i++)
     {
-        snprintf(tempsensors.labels[i], TEMP_LABEL_LEN, TEMP_LABEL_FMT, i);
+        snprintf(tempsensors_.labels[i], TEMP_LABEL_LEN, TEMP_LABEL_FMT, i);
         double value;
         if (!dbus_temp_get_value(i, &value))
         {
@@ -147,10 +144,10 @@ static void add_tempsensors(void)
         else
         {
             LOG_I("%s/%s: Got temperature for sensor %i: %f", __FILE__, __FUNCTION__, i, value);
-            ua_server_add_double(tempsensors.labels[i], value);
+            ua_server_add_double(tempsensors_.labels[i], value);
         }
-        assert(NULL != tempsensors.subid);
-        if (!dbus_temp_subscribe_to_change(&tempsensors.subid[i], i, 0.1))
+        assert(NULL != tempsensors_.subid);
+        if (!dbus_temp_subscribe_to_change(&tempsensors_.subid[i], i, 0.1))
         {
             LOG_E("%s/%s: Failed to subscribe to changes for sensor with id %i", __FILE__, __FUNCTION__, i);
         }
@@ -179,16 +176,14 @@ static void add_ports(void)
             count_all);
     }
 
-    ports_t *ports_p = &ports;
-    ports_init(&ports_p, count_all);
-    assert(NULL != ports_p);
+    ports_init(&ports_, count_all);
 
+    bool state;
     for (uint32_t i = 0; i < count_all; i++)
     {
-        snprintf(ports.labels[i], PORT_LABEL_LEN, PORT_LABEL_FMT, i);
-        LOG_I("%s/%s: Added label (%s) for port:%i", __FILE__, __FUNCTION__, ports.labels[i], i);
+        snprintf(ports_.labels[i], PORT_LABEL_LEN, PORT_LABEL_FMT, i);
+        LOG_I("%s/%s: Added label (%s) for port:%i", __FILE__, __FUNCTION__, ports_.labels[i], i);
 
-        bool state;
         if (!dbus_port_get_state(i, &state))
         {
             LOG_E("%s/%s: Failed to get port state", __FILE__, __FUNCTION__);
@@ -196,24 +191,27 @@ static void add_ports(void)
         else
         {
             LOG_I("%s/%s: Got state for port %i: %d", __FILE__, __FUNCTION__, i, state);
-            ua_server_add_bool(ports.labels[i], state);
+            ua_server_add_bool(ports_.labels[i], state);
         }
 
-        assert(NULL != ports.subid);
-        ports.subid[i] = i;
+        assert(NULL != ports_.subid);
+        ports_.subid[i] = i;
     }
 }
 
 static gboolean launch_ua_server(const guint serverport)
 {
-    assert(NULL == server);
     assert(0 < serverport);
-    assert(!ua_server_running);
+    assert(!ua_server_running_);
     assert(1024 <= serverport && 65535 >= serverport);
 
     // Create an OPC UA server
     LOG_I("%s/%s: Create UA server serving on port %u", __FILE__, __FUNCTION__, serverport);
-    ua_server_init(serverport);
+    if (!ua_server_init(serverport))
+    {
+        LOG_E("%s/%s: Failed to create OPC UA server", __FILE__, __FUNCTION__);
+        return FALSE;
+    }
 
     // Add temperature sensors to OPA UA server
     add_tempsensors();
@@ -221,11 +219,12 @@ static gboolean launch_ua_server(const guint serverport)
     // Add IO ports to OPC UA Server
     add_ports();
 
-    ua_server_running = true;
     LOG_I("%s/%s: Starting UA server on port %u ...", __FILE__, __FUNCTION__, serverport);
-    if (!ua_server_run(&ua_server_thread_id, &ua_server_running))
+    ua_server_running_ = true;
+    if (!ua_server_run(&ua_server_thread_id_, &ua_server_running_))
     {
-        LOG_E("%s/%s: Failed to launch UA server", __FILE__, __FUNCTION__);
+        ua_server_running_ = false;
+        LOG_E("%s/%s: Failed to launch OPC UA server", __FILE__, __FUNCTION__);
         return FALSE;
     }
 
@@ -234,9 +233,9 @@ static gboolean launch_ua_server(const guint serverport)
 
 static void shutdown_ua_server(void)
 {
-    assert(ua_server_running);
-    ua_server_running = false;
-    pthread_join(ua_server_thread_id, NULL);
+    assert(ua_server_running_);
+    ua_server_stop(&ua_server_running_);
+    pthread_join(ua_server_thread_id_, NULL);
 }
 
 static void port_callback(const gchar *name, const gchar *value, void *data)
@@ -250,14 +249,17 @@ static void port_callback(const gchar *name, const gchar *value, void *data)
         LOG_E("%s/%s: illegal value for %s: '%s'", __FILE__, __FUNCTION__, name, value);
         return;
     }
-    port = newport;
-    LOG_I("%s/%s: OPC UA server %s is %u", __FILE__, __FUNCTION__, name, port);
+    port_ = newport;
+    LOG_I("%s/%s: OPC UA server %s is %u", __FILE__, __FUNCTION__, name, port_);
 
-    if (ua_server_running)
+    if (ua_server_running_)
     {
         shutdown_ua_server();
     }
-    (void)launch_ua_server(port);
+    if (!launch_ua_server(port_))
+    {
+        LOG_E("%s/%s: Failed to restart OPC UA server", __FILE__, __FUNCTION__);
+    }
 }
 
 static gboolean setup_param(const gchar *name, AXParameterCallback callbackfn)
@@ -266,10 +268,10 @@ static gboolean setup_param(const gchar *name, AXParameterCallback callbackfn)
     gchar *value = NULL;
 
     assert(NULL != name);
-    assert(NULL != axparameter);
+    assert(NULL != axparameter_);
     assert(NULL != callbackfn);
 
-    if (!ax_parameter_register_callback(axparameter, name, callbackfn, NULL, &error))
+    if (!ax_parameter_register_callback(axparameter_, name, callbackfn, NULL, &error))
     {
         LOG_E("%s/%s: failed to register %s callback", __FILE__, __FUNCTION__, name);
         if (NULL != error)
@@ -279,7 +281,7 @@ static gboolean setup_param(const gchar *name, AXParameterCallback callbackfn)
         }
         return FALSE;
     }
-    if (!ax_parameter_get(axparameter, name, &value, &error))
+    if (!ax_parameter_get(axparameter_, name, &value, &error))
     {
         LOG_E("%s/%s: failed to get %s parameter", __FILE__, __FUNCTION__, name);
         if (NULL != error)
@@ -301,8 +303,8 @@ static gboolean setup_params(const char *appname)
     GError *error = NULL;
 
     assert(NULL != appname);
-    assert(NULL == axparameter);
-    axparameter = ax_parameter_new(appname, &error);
+    assert(NULL == axparameter_);
+    axparameter_ = ax_parameter_new(appname, &error);
     if (NULL != error)
     {
         LOG_E("%s/%s: ax_parameter_new failed (%s)", __FILE__, __FUNCTION__, error->message);
@@ -312,7 +314,7 @@ static gboolean setup_params(const char *appname)
 
     if (!setup_param("port", port_callback))
     {
-        ax_parameter_free(axparameter);
+        ax_parameter_free(axparameter_);
         return FALSE;
     }
 
@@ -326,7 +328,7 @@ static void signal_handler(gint signal_num)
     case SIGTERM:
     case SIGABRT:
     case SIGINT:
-        g_main_loop_quit(main_loop);
+        g_main_loop_quit(main_loop_);
         break;
     default:
         break;
@@ -387,27 +389,30 @@ int main(int argc, char **argv)
 
     // Main loop
     LOG_I("%s/%s: Ready", __FILE__, __FUNCTION__);
-    assert(NULL == main_loop);
-    main_loop = g_main_loop_new(NULL, FALSE);
-    g_main_loop_run(main_loop);
+    assert(NULL == main_loop_);
+    main_loop_ = g_main_loop_new(NULL, FALSE);
+    g_main_loop_run(main_loop_);
 
     // Cleanup and controlled shutdown
     LOG_I("%s/%s: Free parameter handler ...", __FILE__, __FUNCTION__);
-    ax_parameter_free(axparameter);
+    ax_parameter_free(axparameter_);
     LOG_I("%s/%s: Clean up DBus ...", __FILE__, __FUNCTION__);
     dbus_all_cleanup();
 
     LOG_I("%s/%s: Shut down UA server ...", __FILE__, __FUNCTION__);
-    shutdown_ua_server();
+    if (ua_server_running_)
+    {
+        shutdown_ua_server();
+    }
 
     LOG_I("%s/%s: Free data structures ...", __FILE__, __FUNCTION__);
-    tempsensors_t *tempsensors_p = &tempsensors;
+    tempsensors_t *tempsensors_p = &tempsensors_;
     tempsensors_free(&tempsensors_p);
-    ports_t *ports_p = &ports;
+    ports_t *ports_p = &ports_;
     ports_free(&ports_p);
 
     LOG_I("%s/%s: Unreference main loop ...", __FILE__, __FUNCTION__);
-    g_main_loop_unref(main_loop);
+    g_main_loop_unref(main_loop_);
 
     LOG_I("%s/%s: Closing syslog ...", __FILE__, __FUNCTION__);
     close_syslog();

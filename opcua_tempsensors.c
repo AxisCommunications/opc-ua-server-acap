@@ -19,16 +19,15 @@
 
 #include "opcua_tempsensors.h"
 
-void tempsensors_init(tempsensors_t **tempsensors, const size_t size)
+void tempsensors_init(tempsensors_t *tempsensors, const size_t size)
 {
     assert(NULL != tempsensors);
-    assert(NULL != *tempsensors);
-    (*tempsensors)->size = size;
-    (*tempsensors)->subid = calloc(size, sizeof(uint32_t));
-    (*tempsensors)->labels = calloc(size, sizeof(char *));
-    for (int i = 0; i < (*tempsensors)->size; i++)
+    tempsensors->size = size;
+    tempsensors->subid = calloc(size, sizeof(uint32_t));
+    tempsensors->labels = calloc(size, sizeof(char *));
+    for (size_t i = 0; i < tempsensors->size; i++)
     {
-        (*tempsensors)->labels[i] = calloc(TEMP_LABEL_LEN, sizeof(char));
+        tempsensors->labels[i] = calloc(TEMP_LABEL_LEN, sizeof(char));
     }
 }
 
@@ -38,7 +37,7 @@ void tempsensors_free(tempsensors_t **tempsensors)
     {
         if (NULL != *tempsensors)
         {
-            for (int i = 0; i < (*tempsensors)->size; i++)
+            for (size_t i = 0; i < (*tempsensors)->size; i++)
             {
                 free((*tempsensors)->labels[i]);
             }

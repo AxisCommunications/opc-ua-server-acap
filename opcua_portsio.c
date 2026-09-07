@@ -19,16 +19,15 @@
 
 #include "opcua_portsio.h"
 
-void ports_init(ports_t **ports, const size_t size)
+void ports_init(ports_t *ports, const size_t size)
 {
     assert(NULL != ports);
-    assert(NULL != *ports);
-    (*ports)->size = size;
-    (*ports)->subid = calloc(size, sizeof(uint32_t));
-    (*ports)->labels = calloc(size, sizeof(char *));
-    for (int i = 0; i < (*ports)->size; i++)
+    ports->size = size;
+    ports->subid = calloc(size, sizeof(uint32_t));
+    ports->labels = calloc(size, sizeof(char *));
+    for (size_t i = 0; i < ports->size; i++)
     {
-        (*ports)->labels[i] = calloc(PORT_LABEL_LEN, sizeof(char));
+        ports->labels[i] = calloc(PORT_LABEL_LEN, sizeof(char));
     }
 }
 
@@ -38,7 +37,7 @@ void ports_free(ports_t **ports)
     {
         if (NULL != *ports)
         {
-            for (int i = 0; i < (*ports)->size; i++)
+            for (size_t i = 0; i < (*ports)->size; i++)
             {
                 free((*ports)->labels[i]);
             }

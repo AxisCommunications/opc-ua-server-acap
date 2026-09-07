@@ -30,7 +30,7 @@ typedef struct
     char **labels;
 } ports_t;
 
-void ports_init(ports_t **ports, const size_t size);
+void ports_init(ports_t *ports, const size_t size);
 void ports_free(ports_t **ports);
 char *ports_get_label_from_subscription(ports_t *ports, const uint32_t subscription_id);
 

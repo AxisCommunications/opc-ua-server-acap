@@ -30,7 +30,7 @@ typedef struct
     char **labels;
 } tempsensors_t;
 
-void tempsensors_init(tempsensors_t **tempsensors, const size_t size);
+void tempsensors_init(tempsensors_t *tempsensors, const size_t size);
 void tempsensors_free(tempsensors_t **tempsensors);
 char *tempsensors_get_label_from_subscription(tempsensors_t *tempsensors, const uint32_t subscription_id);
 

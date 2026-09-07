@@ -30,8 +30,8 @@
 #define PORT_STATE_TRUE "true"
 #define PORT_STATE_FALSE "false"
 
-static GDBusProxy *dbusproxy_temp;
-static GDBusProxy *dbusproxy_ports;
+static GDBusProxy *dbusproxy_temp_;
+static GDBusProxy *dbusproxy_ports_;
 
 static bool dbus_init(GDBusProxy **dbusproxy, const gchar *name, const gchar *object_path, const gchar *interface_name)
 {
@@ -53,35 +53,35 @@ static bool dbus_init(GDBusProxy **dbusproxy, const gchar *name, const gchar *ob
 
 bool dbus_all_init(void)
 {
-    return dbus_init(&dbusproxy_temp, TEMP_DBUS_SERVICE, TEMP_DBUS_OBJECT, TEMP_DBUS_INTERFACE) &&
-           dbus_init(&dbusproxy_ports, PORTS_DBUS_SERVICE, PORTS_DBUS_OBJECT, PORTS_DBUS_INTERFACE);
+    return dbus_init(&dbusproxy_temp_, TEMP_DBUS_SERVICE, TEMP_DBUS_OBJECT, TEMP_DBUS_INTERFACE) &&
+           dbus_init(&dbusproxy_ports_, PORTS_DBUS_SERVICE, PORTS_DBUS_OBJECT, PORTS_DBUS_INTERFACE);
 }
 
 void dbus_all_cleanup(void)
 {
     // dbusproxy_temp
-    if (NULL != dbusproxy_temp)
+    if (NULL != dbusproxy_temp_)
     {
-        g_object_unref(dbusproxy_temp);
-        dbusproxy_temp = NULL;
+        g_object_unref(dbusproxy_temp_);
+        dbusproxy_temp_ = NULL;
     }
 
     // dbusproxy_ports
-    if (NULL != dbusproxy_ports)
+    if (NULL != dbusproxy_ports_)
     {
-        g_object_unref(dbusproxy_ports);
-        dbusproxy_ports = NULL;
+        g_object_unref(dbusproxy_ports_);
+        dbusproxy_ports_ = NULL;
     }
 }
 
 bool dbus_temp_get_number_of_sensors(uint32_t *count)
 {
     assert(NULL != count);
-    assert(NULL != dbusproxy_temp);
+    assert(NULL != dbusproxy_temp_);
     GError *error = NULL;
 
     GVariant *result = g_dbus_proxy_call_sync(
-        dbusproxy_temp, "GetNbrOfTemperatureSensors", NULL, G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
+        dbusproxy_temp_, "GetNbrOfTemperatureSensors", NULL, G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
     if (NULL == result)
     {
         LOG_E(
@@ -90,7 +90,6 @@ bool dbus_temp_get_number_of_sensors(uint32_t *count)
             __FUNCTION__,
             error->message);
         g_error_free(error);
-        g_variant_unref(result);
         return false;
     }
     LOG_I("%s/%s: Got number of temperature sensors response from D-Bus!", __FILE__, __FUNCTION__);
@@ -111,11 +110,11 @@ bool dbus_temp_get_number_of_sensors(uint32_t *count)
 bool dbus_temp_get_value(int id, double *value)
 {
     assert(NULL != value);
-    assert(NULL != dbusproxy_temp);
+    assert(NULL != dbusproxy_temp_);
     GError *error = NULL;
 
     GVariant *result = g_dbus_proxy_call_sync(
-        dbusproxy_temp,
+        dbusproxy_temp_,
         "GetTemperature",
         g_variant_new("(is)", id, "celsius"),
         G_DBUS_CALL_FLAGS_NONE,
@@ -126,7 +125,6 @@ bool dbus_temp_get_value(int id, double *value)
     {
         LOG_E("%s/%s: Failed to get sensor %i temperature from D-Bus (%s)", __FILE__, __FUNCTION__, id, error->message);
         g_error_free(error);
-        g_variant_unref(result);
         return false;
     }
     LOG_I("%s/%s: Got temperature response from D-Bus for sensor %i!", __FILE__, __FUNCTION__, id);
@@ -146,12 +144,12 @@ bool dbus_temp_get_value(int id, double *value)
 
 bool dbus_temp_subscribe_to_change(uint32_t *subscription_id, uint32_t sensor_id, double d)
 {
-    assert(NULL != dbusproxy_temp);
+    assert(NULL != dbusproxy_temp_);
     assert(NULL != subscription_id);
     GError *error = NULL;
 
     GVariant *result = g_dbus_proxy_call_sync(
-        dbusproxy_temp,
+        dbusproxy_temp_,
         "RegisterForTemperatureChangeSignal",
         g_variant_new("(id)", sensor_id, d),
         G_DBUS_CALL_FLAGS_NONE,
@@ -179,6 +177,7 @@ bool dbus_temp_subscribe_to_change(uint32_t *subscription_id, uint32_t sensor_id
     }
     *subscription_id = g_variant_get_int32(value);
     g_variant_unref(value);
+    g_variant_unref(result);
     LOG_I(
         "%s/%s: Subscribed sensor %i got register response id %i", __FILE__, __FUNCTION__, sensor_id, *subscription_id);
     return true;
@@ -212,34 +211,33 @@ bool dbus_temp_unpack_signal(GVariant *parameters, uint32_t *subscription_id, do
 
 void dbus_connect_temp_g_signal(GCallback func)
 {
-    assert(NULL != dbusproxy_temp);
+    assert(NULL != dbusproxy_temp_);
     assert(NULL != func);
-    g_signal_connect(dbusproxy_temp, "g-signal", func, NULL);
+    g_signal_connect(dbusproxy_temp_, "g-signal", func, NULL);
 }
 
 void dbus_connect_ports_g_signal(GCallback func)
 {
-    assert(NULL != dbusproxy_ports);
+    assert(NULL != dbusproxy_ports_);
     assert(NULL != func);
-    g_signal_connect(dbusproxy_ports, "g-signal", func, NULL);
+    g_signal_connect(dbusproxy_ports_, "g-signal", func, NULL);
 }
 
 bool dbus_get_number_of_ioports(uint32_t *inputs, uint32_t *outputs)
 {
     assert(NULL != inputs);
     assert(NULL != outputs);
-    assert(NULL != dbusproxy_ports);
+    assert(NULL != dbusproxy_ports_);
     GError *error = NULL;
     GVariant *ret_val = NULL;
 
     ret_val =
-        g_dbus_proxy_call_sync(dbusproxy_ports, "GetNbrPorts", NULL, G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
+        g_dbus_proxy_call_sync(dbusproxy_ports_, "GetNbrPorts", NULL, G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
     if (NULL == ret_val)
     {
         LOG_E("%s/%s: Failed to get number of ports from D-Bus (%s)", __FILE__, __FUNCTION__, error->message);
 
         g_error_free(error);
-        g_variant_unref(ret_val);
         return false;
     }
     LOG_I("%s/%s: Got number of ports response from D-Bus!", __FILE__, __FUNCTION__);
@@ -256,17 +254,16 @@ bool dbus_get_number_of_ioports(uint32_t *inputs, uint32_t *outputs)
 bool dbus_port_get_state(const int id, bool *state)
 {
     assert(NULL != state);
-    assert(NULL != dbusproxy_ports);
+    assert(NULL != dbusproxy_ports_);
     GError *error = NULL;
 
     GVariant *result = g_dbus_proxy_call_sync(
-        dbusproxy_ports, "GetState", g_variant_new("(u)", id), G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
+        dbusproxy_ports_, "GetState", g_variant_new("(u)", id), G_DBUS_CALL_FLAGS_NONE, NO_TIMEOUT, NULL, &error);
 
     if (NULL == result)
     {
         LOG_E("%s/%s: Failed to get port %i state from D-Bus (%s)", __FILE__, __FUNCTION__, id, error->message);
         g_error_free(error);
-        g_variant_unref(result);
         return false;
     }
 
