@@ -37,17 +37,6 @@ static guint port_ = 0;
 static UA_Boolean ua_server_running_ = false;
 static pthread_t ua_server_thread_id_;
 
-static void open_syslog(const char *app_name)
-{
-    openlog(app_name, LOG_PID, LOG_LOCAL4);
-}
-
-static void close_syslog(void)
-{
-    LOG_I("✅ Exiting!");
-    closelog();
-}
-
 static void on_dbus_signal(
     G_GNUC_UNUSED GDBusProxy *proxy,
     const gchar *sender_name,
@@ -354,10 +343,17 @@ static gboolean signal_handler_init(void)
     return TRUE;
 }
 
+static gboolean ready_callback(gpointer user_data)
+{
+    (void)user_data;
+    LOG_I("✅ Main loop started");
+    return G_SOURCE_REMOVE;
+}
+
 int main(int argc, char **argv)
 {
     char *app_name = basename(argv[0]);
-    open_syslog(app_name);
+    openlog(app_name, LOG_PID, LOG_LOCAL4);
 
     if (!signal_handler_init())
     {
@@ -365,55 +361,57 @@ int main(int argc, char **argv)
     }
 
     // Setup D-Bus
-    LOG_I("⏳ Setting up D-Bus ...");
+    LOG_I("⏳ Set up D-Bus ...");
     if (!dbus_all_init())
     {
         LOG_E("%s/%s: Failed to setup D-Bus", __FILE__, __FUNCTION__);
     }
 
     // Connect to D-Bus signals
-    LOG_I("⏳ Connecting to D-Bus signal for temperatures ...");
+    LOG_I("⏳ Connect to D-Bus signal for temperatures ...");
     dbus_connect_temp_g_signal(G_CALLBACK(on_dbus_signal));
 
-    LOG_I("⏳ Connecting to D-Bus signal for ports ...");
+    LOG_I("⏳ Connect to D-Bus signal for ports ...");
     dbus_connect_ports_g_signal(G_CALLBACK(on_dbus_signal));
 
     // Setup parameters (will also launch OPC UA server)
-    LOG_I("⏳ Setting up parameters ...");
+    LOG_I("⏳ Set up parameters ...");
     if (!setup_params(app_name))
     {
         LOG_E("%s/%s: Failed to setup parameters", __FILE__, __FUNCTION__);
     }
 
     // Main loop
-    LOG_I("✅ Ready");
     assert(NULL == main_loop_);
+    LOG_I("⏳ Create main loop ...");
     main_loop_ = g_main_loop_new(NULL, FALSE);
+    (void)g_idle_add_full(G_PRIORITY_HIGH, ready_callback, NULL, NULL);
+    LOG_I("⏳ Start main loop ...");
     g_main_loop_run(main_loop_);
 
     // Cleanup and controlled shutdown
-    LOG_I("⏳ Freeing parameter handler ...");
+    LOG_I("⏳ Free parameter handler ...");
     ax_parameter_free(axparameter_);
-    LOG_I("⏳ Cleaning up D-Bus ...");
+    LOG_I("🧹 Clean up D-Bus ...");
     dbus_all_cleanup();
 
-    LOG_I("⏳ Shutting down UA server ...");
+    LOG_I("🧹 Shut down UA server ...");
     if (ua_server_running_)
     {
         shutdown_ua_server();
     }
 
-    LOG_I("⏳ Freeing data structures ...");
+    LOG_I("🧹 Free data structures ...");
     tempsensors_t *tempsensors_p = &tempsensors_;
     tempsensors_free(&tempsensors_p);
     ports_t *ports_p = &ports_;
     ports_free(&ports_p);
 
-    LOG_I("⏳ Unreferencing main loop ...");
+    LOG_I("🧹 Unreference main loop ...");
     g_main_loop_unref(main_loop_);
 
-    LOG_I("⏳ Closing syslog ...");
-    close_syslog();
+    LOG_I("✅ Exiting");
+    closelog();
 
     return EXIT_SUCCESS;
 }
